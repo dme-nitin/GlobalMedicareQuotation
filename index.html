@@ -1218,6 +1218,8 @@ function buildBackendPayload(){
     email:$('cEmail').value||'',
     phone:$('cPhone').value||'',
     subject:$('subj').value||'',
+    productName:($('prod').selectedOptions[0]&&$('prod').selectedOptions[0].text)||'',
+    productKey:$('prod').value||'',
     quotationNo:$('qNo').value||'',
     items:mainItems.concat(consItems),
     totalAmount:M.gt+(C?C.gt:0),
