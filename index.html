@@ -250,7 +250,7 @@ body.mode-pv  #pvPane{display:block}
     <div class="row r3">
       <div><label>Quotation No.</label><input id="qNo" placeholder="Global/CBD/26-27/132"></div>
       <div><label>Date</label><input type="date" id="qDate"></div>
-      <div><label>GST Rate (%)</label><input type="number" id="gst" value="5" step="0.01" oninput="render()"></div>
+      <div><label>GST Rate (%)</label><input type="number" id="gst" value="5" step="0.01" oninput="syncConsGst_();render()"></div>
     </div>
     <label>Subject Line</label>
     <input id="subj" placeholder="Quotation for SpecVue Cholangioscope" oninput="render()">
@@ -289,8 +289,10 @@ body.mode-pv  #pvPane{display:block}
     <h2>7 &#183; Consumables <span class="pill">optional</span></h2>
     <div id="consItems"></div>
     <button class="btn2 tiny" onclick="addItem('cons')">+ Add Consumable</button>
-    <label style="margin-top:12px">Consumables Special Discount (&#8377;)</label>
-    <input type="number" id="cdisc" value="0" oninput="render()">
+    <div class="row r2" style="margin-top:12px">
+      <div><label>GST Rate (%) <span class="pill">auto</span></label><input type="number" id="cgst" value="5" step="0.01" oninput="cgstManuallySet=true;render()"></div>
+      <div><label>Consumables Special Discount (&#8377;)</label><input type="number" id="cdisc" value="0" oninput="render()"></div>
+    </div>
   </div>
 
   <div class="card">
@@ -471,6 +473,15 @@ const CAT = {
 
 /* ================= STATE ================= */
 let items={main:[],cons:[]};
+
+/* Consumables GST auto-copies from the main GST rate by default. Once the
+   user directly edits the Consumables GST field, this flag stops the
+   auto-copy for the rest of the session (per product), so their manual
+   choice is respected instead of being silently overwritten. */
+let cgstManuallySet=false;
+function syncConsGst_(){
+  if(!cgstManuallySet)$('cgst').value=$('gst').value;
+}
 const $=id=>document.getElementById(id);
 
 /* ================= PRODUCT IMAGE LIBRARY =================
@@ -667,6 +678,7 @@ function applyProduct(){
   $('roiOn').checked=R.on; $('roiVol').value=R.v||''; $('roiPrice').value=R.p||''; $('roiCost').value=R.c||'';
   $('tWar').value=p.war||''; $('tDel').value=p.del||''; $('tAmc').value=p.amc||''; $('tPay').value=p.pay||'';
   $('tVal').value=p.val||30; $('disc').value=0; $('cdisc').value=0;
+  cgstManuallySet=false; syncConsGst_();
   const pref=({fibro630:'Fibro',fibro530:'Fibro',fibro430:'Fibro',cholang:'CBD',abt:'ABT',hbt:'HBT',hepa:'Hepa',
     inbody970:'Inbody',inbody770:'Inbody',pillcam:'CE',camc:'CE',mano:'Mano',digi:'Digi',endoflip:'Endo',fluore:'GM'})[$('prod').value]||'GM';
   $('qNo').value=`Global/${pref}/26-27/`;
@@ -755,11 +767,11 @@ function descHTML(d){
 }
 
 /* ---------- Calc ---------- */
-function calc(t,dEl){
+function calc(t,dEl,gstEl){
   const sub=items[t].reduce((s,i)=>s+(i.q*i.r),0);
   const dis=parseFloat($(dEl).value)||0;
   const net=sub-dis;
-  const rate=parseFloat($('gst').value)||0;
+  const rate=parseFloat($(gstEl||'gst').value)||0;
   const tax=net*rate/100;
   return {sub,dis,net,tax,rate,gt:net+tax};
 }
@@ -806,7 +818,7 @@ function paginateBlocks_(blocks){
 }
 
 function render(){
-  const M=calc('main','disc'), C=items.cons.length?calc('cons','cdisc'):null;
+  const M=calc('main','disc'), C=items.cons.length?calc('cons','cdisc','cgst'):null;
   const igst=$('taxType').value==='IGST';
   const taxRow=x=>igst?`<tr class="sum"><td colspan="3">IGST @ ${x.rate}%</td><td class="n">${R(x.tax)}</td></tr>`
     :`<tr class="sum"><td colspan="3">CGST @ ${(x.rate/2)}%</td><td class="n">${R(x.tax/2)}</td></tr><tr class="sum"><td colspan="3">SGST @ ${(x.rate/2)}%</td><td class="n">${R(x.tax/2)}</td></tr>`;
@@ -1084,7 +1096,7 @@ async function makeDocx(){
     return new Table({columnWidths:CW,width:{size:W,type:WidthType.DXA},rows});
   }
 
-  const M=calc('main','disc'), C=items.cons.length?calc('cons','cdisc'):null;
+  const M=calc('main','disc'), C=items.cons.length?calc('cons','cdisc','cgst'):null;
   const k=[];
   // Letterhead is applied as a FIRST-PAGE background (see firstPageHeader below),
   // so nothing is pushed inline here \u2014 content simply starts inside the safe area.
@@ -1201,7 +1213,7 @@ async function makeDocx(){
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyvxNsZTC3FL-V3VsyXqZVZZR43je8lgBq2bnYCFkIJjbyazXbnxJgV2RLEqr4rJxE/exec';
 
 function buildBackendPayload(){
-  const M=calc('main','disc'), C=items.cons.length?calc('cons','cdisc'):null;
+  const M=calc('main','disc'), C=items.cons.length?calc('cons','cdisc','cgst'):null;
   const mainItems=items.main.map(it=>({description:it.d,qty:it.q,rate:it.r}));
   const consItems=items.cons.map(it=>({description:'[Consumable] '+it.d,qty:it.q,rate:it.r}));
   const terms=[
