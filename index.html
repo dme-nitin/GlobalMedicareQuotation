@@ -791,15 +791,23 @@ function applyExtraProduct(slotId,key){
     (p.cons||[]).forEach(x=>items.cons.push({gst:5,disc:0,...x,_slot:slotId}));
     const R=p.roi||{on:false,v:0,p:0,c:0};
     roiState[slotId]={on:!!R.on,vol:R.v||'',price:R.p||'',cost:R.c||''};
-    // Append this product's overview/benefits as a clearly labelled
-    // continuation, rather than overwriting the primary product's text.
+    // Once 2+ products are combined, label EVERY product's overview and
+    // benefits with its own name so they don't visually blend together
+    // (retroactively label the primary product's own text the first time
+    // a second product is added).
+    const isFirstExtra=extraProductSlots.filter(s=>s.key).length===1;
+    const primaryP=CAT[$('prod').value];
+    if(isFirstExtra&&primaryP&&primaryP.n){
+      if($('overview').value.trim())$('overview').value='##'+primaryP.n+'\n'+$('overview').value;
+      if($('benefits').value.trim())$('benefits').value='##'+primaryP.n+'\n'+$('benefits').value;
+    }
     if(p.ov){
       const sep=$('overview').value.trim()?'\n\n':'';
-      $('overview').value+=sep+p.n+':\n'+p.ov;
+      $('overview').value+=sep+'##'+p.n+'\n'+p.ov;
     }
     if(p.ben&&p.ben.length){
       const sep=$('benefits').value.trim()?'\n':'';
-      $('benefits').value+=sep+p.ben.join('\n');
+      $('benefits').value+=sep+'##'+p.n+'\n'+p.ben.join('\n');
     }
   }else{
     delete roiState[slotId];
@@ -957,6 +965,34 @@ const dfmt=s=>{if(!s)return'';const d=new Date(s+'T00:00:00');
   const dd=d.getDate(),su=dd%10==1&&dd!=11?'st':dd%10==2&&dd!=12?'nd':dd%10==3&&dd!=13?'rd':'th';
   return dd+su+' '+d.toLocaleString('en-IN',{month:'long'})+', '+d.getFullYear();};
 const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+/* Lines starting with '##' are product-name labels inserted when combining
+   multiple products (see applyExtraProduct) - rendered as a bold
+   sub-heading instead of a normal paragraph/bullet, so each product's
+   text stays visually separated. */
+function isHeadingLine_(x){ return /^##/.test(x); }
+function headingText_(x){ return x.replace(/^##/,''); }
+
+function renderOverviewHTML_(lines){
+  return lines.map(x=>isHeadingLine_(x)
+    ? `<p style="margin:14px 0 4px;font-weight:700;color:var(--navy)">${esc(headingText_(x))}</p>`
+    : `<p>${esc(x)}</p>`
+  ).join('');
+}
+function renderBenefitsHTML_(lines){
+  let html=''; let open=false;
+  lines.forEach(x=>{
+    if(isHeadingLine_(x)){
+      if(open){html+='</ul>'; open=false;}
+      html+=`<p style="margin:10px 0 2px;font-weight:700;color:var(--navy)">${esc(headingText_(x))}</p>`;
+    }else{
+      if(!open){html+='<ul>'; open=true;}
+      html+='<li>'+esc(x)+'</li>';
+    }
+  });
+  if(open)html+='</ul>';
+  return html;
+}
+
 function descHTML(d){
   const L=(d||'').split('\n').filter(x=>x.trim());
   if(!L.length)return'';
@@ -1124,8 +1160,8 @@ function render(){
     <p>${esc($('cSal').value)}</p>
     <p>Greetings from Global Medicare. Thank you for the opportunity to present the following proposal. We have set out below a brief introduction to our organisation, an overview of the proposed solution and its clinical value to your department, followed by our commercial offer.</p>`);
   allBlocks.push(`<h3>About Global Medicare</h3>${ab.map(x=>'<p>'+esc(x)+'</p>').join('')}`);
-  allBlocks.push(`<h3>The Proposed Solution</h3>${ov.map(x=>'<p>'+esc(x)+'</p>').join('')}`);
-  if(bl.length)allBlocks.push(`<h3>Clinical &amp; Operational Benefits</h3><ul>${bl.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul>`);
+  allBlocks.push(`<h3>The Proposed Solution</h3>${renderOverviewHTML_(ov)}`);
+  if(bl.length)allBlocks.push(`<h3>Clinical &amp; Operational Benefits</h3>${renderBenefitsHTML_(bl)}`);
   if(roiHTML)allBlocks.push(roiHTML);
   allBlocks.push(`<h3>Commercial Offer</h3>${tbl('main',M)}`);
   if(C)allBlocks.push(`<h3>Consumables</h3>${tbl('cons',C)}`);
@@ -1376,13 +1412,19 @@ async function makeDocx(){
   k.push(H('About Global Medicare'));
   $('about').value.split('\n').filter(x=>x.trim()).forEach(x=>k.push(P(x,{a:AlignmentType.JUSTIFIED})));
   k.push(H('The Proposed Solution'));
-  $('overview').value.split('\n').filter(x=>x.trim()).forEach(x=>k.push(P(x,{a:AlignmentType.JUSTIFIED})));
+  $('overview').value.split('\n').filter(x=>x.trim()).forEach(x=>{
+    if(isHeadingLine_(x))k.push(P(headingText_(x),{b:1,c:NAVY,sb:160,sp:60}));
+    else k.push(P(x,{a:AlignmentType.JUSTIFIED}));
+  });
 
   // ---- end of the letterhead page; everything below is on plain A4 ----
   k.push(new Paragraph({children:[new PageBreak()]}));
 
   const bl=$('benefits').value.split('\n').filter(x=>x.trim());
-  if(bl.length){k.push(H('Clinical & Operational Benefits'));bl.forEach(x=>k.push(P(x,{bu:1,sp:60})));}
+  if(bl.length){k.push(H('Clinical & Operational Benefits'));bl.forEach(x=>{
+    if(isHeadingLine_(x))k.push(P(headingText_(x),{b:1,c:NAVY,sb:120,sp:60}));
+    else k.push(P(x,{bu:1,sp:60}));
+  });}
 
   roiOrderedKeys_().forEach(key=>{
     const st=roiState[key]; if(!st||!st.on)return;
