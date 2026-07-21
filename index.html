@@ -406,7 +406,7 @@ const CAT = {
  ben:["Non-invasive alternative to endoscopic biopsy for H. pylori detection","Fully automatic operation \u2014 minimal operator training, highly reproducible results","Result within minutes; ideal for OPD and same-visit prescribing","Suitable for both initial diagnosis and post-eradication confirmation","Low cost per test with high patient acceptance \u2014 drives strong repeat volume","350+ installations across 23 Indian states; proven service and reagent supply chain"],
  it:[{d:"Helic ABT Reader (Automatic)\nHSN: 90279090",q:1,r:450000},{d:"ABT Indicator Test Kit \u2014 Complimentary (FOC)",q:10,r:0}],
  cons:[{d:"ABT Indicator Test Kit\nIncludes: Indicator Tube, Substrate, Mouthpiece",q:100,r:1000}],
- roi:{on:true,v:200,p:900,c:300}, war:"12 months.", del:"3 to 4 Weeks.", amc:"", pay:"100% Advance Payment along with Purchase Order."},
+ roi:{on:true,v:200,p:2500,c:1000}, war:"12 months.", del:"3 to 4 Weeks.", amc:"", pay:"100% Advance Payment along with Purchase Order."},
 
 "hbt":{n:"Hydrogen Breath Test Device",subj:"Quotation for Hydrogen Breath Test Device",
  ov:"The Hydrogen Breath Test device supports non-invasive diagnosis of SIBO, lactose intolerance, fructose malabsorption and orocaecal transit disorders \u2014 a diagnostic segment with growing referral volume and almost no competing point-of-care alternative.",
@@ -783,9 +783,9 @@ function applyExtraProduct(slotId,key){
   if(slot)slot.key=key;
   const p=CAT[key];
   if(p&&p.n){
-    (p.it||[]).forEach(x=>{
+    (p.it||[]).forEach((x,idx)=>{
       const it={...x,_slot:slotId};
-      if(!it.img)it.img=LIB[key]||'';
+      if(idx===0&&!it.img)it.img=LIB[key]||'';
       items.main.push(it);
     });
     (p.cons||[]).forEach(x=>items.cons.push({gst:5,disc:0,...x,_slot:slotId}));
