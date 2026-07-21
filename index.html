@@ -181,6 +181,7 @@ body.mode-pv  #pvPane{display:block}
 <div class="tabs">
   <button class="tab on" id="tabE" onclick="go('edit')">&#9999;&#65039; Edit Quotation</button>
   <button class="tab"    id="tabP" onclick="go('pv')">&#128065; Preview <span class="dot" id="wc" style="display:none">0</span></button>
+  <button class="tab" style="margin-left:auto;background:rgba(255,255,255,.14)" onclick="clearForm()">&#128465;&#65039; Clear Form</button>
 </div>
 
 <!-- ================= PREVIEW PANE ================= -->
@@ -208,6 +209,10 @@ body.mode-pv  #pvPane{display:block}
     <label>Select from catalogue</label>
     <select id="prod" onchange="applyProduct()"></select>
     <div class="hint">Loads the product blurb, benefits, ROI defaults, price, terms &#8212; and the stored product image &#8212; from your past quotations. Everything below stays editable.</div>
+
+    <div id="extraProducts"></div>
+    <button class="btn2 tiny" style="margin-top:8px" onclick="addExtraProductSlot()">+ Add Another Product</button>
+    <div class="hint">Combine up to 5 products total in one quotation. Each additional product's items and consumables are added below (main product's items stay editable as before); its overview and benefits are appended into the fields in Section 4.</div>
 
     <button type="button" class="collapseHead" id="libToggle">
       <span>Product Image Library <span class="pill">upload once</span></span>
@@ -268,13 +273,8 @@ body.mode-pv  #pvPane{display:block}
 
   <div class="card">
     <h2>5 &#183; ROI Snapshot</h2>
-    <label><input type="checkbox" id="roiOn" style="width:auto" onchange="render()"> Include ROI section</label>
-    <div class="row r3" style="margin-top:8px">
-      <div><label>Tests / month</label><input type="number" id="roiVol" oninput="render()"></div>
-      <div><label>Charge / test (&#8377;)</label><input type="number" id="roiPrice" oninput="render()"></div>
-      <div><label>Consumable cost / test (&#8377;)</label><input type="number" id="roiCost" oninput="render()"></div>
-    </div>
-    <div class="hint">Payback is auto-computed against the Grand Total of the main equipment table.</div>
+    <div id="roiBlocks"></div>
+    <div class="hint">Each selected product's ROI appears as its own block below (auto-loaded from the catalogue where available). Payback is computed against that product's own equipment cost, not the combined total.</div>
   </div>
 
   <div class="card">
@@ -290,9 +290,10 @@ body.mode-pv  #pvPane{display:block}
     <div id="consItems"></div>
     <button class="btn2 tiny" onclick="addItem('cons')">+ Add Consumable</button>
     <div class="row r2" style="margin-top:12px">
-      <div><label>GST Rate (%) <span class="pill">auto</span></label><input type="number" id="cgst" value="5" step="0.01" oninput="cgstManuallySet=true;render()"></div>
-      <div><label>Consumables Special Discount (&#8377;)</label><input type="number" id="cdisc" value="0" oninput="render()"></div>
+      <div><label>Default GST Rate (%) <span class="pill">auto</span></label><input type="number" id="cgst" value="5" step="0.01" oninput="cgstManuallySet=true;render()"></div>
+      <div><label>Default Discount for New Items (&#8377;)</label><input type="number" id="cdisc" value="0" oninput="render()"></div>
     </div>
+    <div class="hint">Each consumable item above has its own editable GST Rate and Discount &#8212; these two fields just set the starting value whenever you add a new consumable.</div>
   </div>
 
   <div class="card">
@@ -405,7 +406,7 @@ const CAT = {
  ben:["Non-invasive alternative to endoscopic biopsy for H. pylori detection","Fully automatic operation \u2014 minimal operator training, highly reproducible results","Result within minutes; ideal for OPD and same-visit prescribing","Suitable for both initial diagnosis and post-eradication confirmation","Low cost per test with high patient acceptance \u2014 drives strong repeat volume","350+ installations across 23 Indian states; proven service and reagent supply chain"],
  it:[{d:"Helic ABT Reader (Automatic)\nHSN: 90279090",q:1,r:450000},{d:"ABT Indicator Test Kit \u2014 Complimentary (FOC)",q:10,r:0}],
  cons:[{d:"ABT Indicator Test Kit\nIncludes: Indicator Tube, Substrate, Mouthpiece",q:100,r:1000}],
- roi:{on:true,v:200,p:900,c:250}, war:"12 months.", del:"3 to 4 Weeks.", amc:"", pay:"100% Advance Payment along with Purchase Order."},
+ roi:{on:true,v:200,p:900,c:300}, war:"12 months.", del:"3 to 4 Weeks.", amc:"", pay:"100% Advance Payment along with Purchase Order."},
 
 "hbt":{n:"Hydrogen Breath Test Device",subj:"Quotation for Hydrogen Breath Test Device",
  ov:"The Hydrogen Breath Test device supports non-invasive diagnosis of SIBO, lactose intolerance, fructose malabsorption and orocaecal transit disorders \u2014 a diagnostic segment with growing referral volume and almost no competing point-of-care alternative.",
@@ -443,12 +444,14 @@ const CAT = {
  ov:"PillCam Capsule Endoscopy from Medtronic enables complete visualisation of the small bowel \u2014 the segment that neither upper endoscopy nor colonoscopy can reach. It is the definitive tool for obscure GI bleeding, suspected Crohn's disease and small-bowel tumour surveillance. Global Medicare is an authorised distributor for Medtronic's GI Solutions portfolio.",
  ben:["Complete small-bowel visualisation \u2014 reaches where conventional endoscopy cannot","Ingestible, ambulatory, sedation-free; the patient continues a normal day during recording","First-line modality for obscure GI bleeding as per current society guidance","RAPID v9 software with automated lesion-detection support accelerates read time","Establishes a differentiated small-bowel service line with strong referral pull","Backed by Medtronic's global service infrastructure and Global Medicare's local support"],
  it:[{d:"PillCam Capsule Endoscopy System includes:\n1. PillCam Data Recorder DR3\n2. PillCam Cradle DR3\n3. PillCam Data Recorder Accessories\n4. PillCam Sensor Array \u2013 8 Lead DR3\n5. RAPID Software v.9\nHSN: 90189099",q:1,r:450000}],
+ cons:[{d:"SB3 Capsule and Sleeves",q:1,r:32000}],
  roi:{on:true,v:12,p:25000,c:12000}, war:"12 months from the date of installation.", del:"3 to 4 Weeks.", amc:"", pay:"100% Advance Payment along with Purchase Order."},
 
 "mano":{n:"ManoScan High-Resolution Manometry (Medtronic)",subj:"Proposal for ManoScan \u2013 Solid-State High-Resolution Manometry",
  ov:"ManoScan is Medtronic's solid-state high-resolution manometry system with ManoView software \u2014 the reference platform for evaluating oesophageal motor function. By precisely quantifying oesophageal and sphincter contractions, it supports definitive diagnosis of dysphagia, achalasia and hiatal hernia, and generates the Chicago Classification output that guides therapy.",
  ben:["Solid-state HRM with ManoView \u2014 the reference standard for oesophageal motility assessment","Definitive diagnosis of achalasia subtypes, dysphagia and hiatal hernia","Procedure completes in 10 minutes or less and requires minimal specialised training","Chicago Classification output directly informs POEM / Heller / dilatation decisions","Essential prerequisite for a credible foregut and bariatric surgery programme","Backed by Medtronic global engineering and Global Medicare's pan-India service network"],
  it:[{d:"ManoScan ESO Solid-State High-Resolution Manometry System\nMake: Medtronic\nIncludes ManoView Analysis Software and standard accessories\nHSN: 90189099",q:1,r:4000000}],
+ cons:[{d:"HRM AR Catheter (Adult)",q:1,r:850000},{d:"HRM ESO Impedance",q:1,r:800000}],
  roi:{on:true,v:25,p:9000,c:1500}, war:"System Warranty: 1 Year from date of shipment (excluding catheter). Manufacturer's warranty terms apply.", del:"6\u20138 Weeks post confirmed order.", amc:"", pay:"100% Advance Payment along with Purchase Order.", val:90},
 
 "digi":{n:"Digitrapper pH-Z System (Medtronic)",subj:"Quotation for Digitrapper pH-Z System and ZPH Catheter by Medtronic",
@@ -462,17 +465,25 @@ const CAT = {
  ov:"EndoFLIP 300 uses impedance planimetry to measure the distensibility of the gastro-oesophageal junction and pylorus in real time, during endoscopy. It gives the endoscopist an objective, intra-procedural measurement of sphincter compliance \u2014 turning a subjective judgement into a number.",
  ben:["Real-time intra-procedural measurement of GEJ and pyloric distensibility","Objective endpoint for POEM, Heller myotomy and pneumatic dilatation \u2014 measure before and after","Diagnoses achalasia and EGJ outflow obstruction where HRM findings are equivocal","Impedance planimetry integrates into the existing endoscopy workflow with no separate visit","Positions the department at the leading edge of therapeutic foregut endoscopy","Medtronic-engineered, with Global Medicare's local application and service support"],
  it:[{d:"EndoFLIP 300 System (Medtronic)\nHSN: 90189099",q:1,r:7142857}],
+ cons:[{d:"Catheter",q:1,r:55000}],
  roi:{on:false,v:0,p:0,c:0}, war:"1 Year standard warranty on device.", del:"4 to 6 Weeks.", amc:"", pay:"100% Advance along with the purchase order."},
 
 "camc":{n:"Capsule Endoscopy Workstation (Medtronic)",subj:"Quotation for PillCam Capsule Endoscopy System with Workstation by Medtronic",
  ov:"A complete PillCam Capsule Endoscopy System with dedicated reading workstation, configured for institutional deployment with extended warranty and comprehensive annual maintenance \u2014 the configuration appropriate for tertiary-care and government institutions requiring guaranteed uptime across a multi-year horizon.",
  ben:["Complete small-bowel visualisation with dedicated high-performance reading workstation","5-year warranty with structured CAMC \u2014 total cost of ownership defined upfront","RAPID v9 software with automated lesion detection reduces read time per study","Guaranteed uptime and preventive maintenance schedule appropriate for institutional volumes","Meets tender and institutional procurement documentation requirements","Backed by Medtronic global engineering and Global Medicare's pan-India service network"],
  it:[{d:"PillCam Capsule Endoscopy System with Workstation\nMake: Medtronic\nIncludes: Data Recorder DR3, Cradle DR3, Sensor Array \u2013 8 Lead DR3, RAPID Software v.9, Dedicated Reading Workstation\nHSN: 90189099",q:1,r:900000}],
+ cons:[{d:"SB3 Capsule and Sleeves",q:1,r:32000}],
  roi:{on:false,v:0,p:0,c:0}, war:"5 Years.", del:"3 to 4 Weeks.", amc:"CAMC: 7% of total invoice value with 10% escalation every year; commences after warranty (6th Year onwards).", pay:"100% Advance Payment along with Purchase Order."}
 };
 
 /* ================= STATE ================= */
 let items={main:[],cons:[]};
+let extraProductSlots=[]; // {id, key} - tracks which product is chosen in each "additional product" slot
+let extraProductSeq=0;
+
+/* Per-product ROI state: key is 'primary' for the main product, or an
+   additional-product slot id. Each value: {on, vol, price, cost}. */
+let roiState={};
 
 /* Consumables GST auto-copies from the main GST rate by default. Once the
    user directly edits the Consumables GST field, this flag stops the
@@ -639,6 +650,55 @@ function exportSig(){
 /* Bootstrap \u2014 DEFINED here, CALLED at the very bottom of this script,
    after every const (IN, esc, dfmt, R, A, B ...) has been initialized.
    Calling it here would throw: "Cannot access 'esc' before initialization". */
+/* ---------- Clear Form ----------
+   Resets every field, all products, all items and the seal checkbox back
+   to a fresh, initial-load state. Also wipes the autosave, so nothing
+   comes back on the next page load either. */
+function clearForm(){
+  if(!confirm('Are you sure you want to clear the entire form? This cannot be undone.'))return;
+
+  // Products (main + additional)
+  $('prod').value='';
+  extraProductSlots.forEach(s=>{const el=document.getElementById(s.id); if(el)el.remove();});
+  extraProductSlots=[];
+  items={main:[{d:'',q:1,r:0}],cons:[]};
+
+  // Customer
+  $('cName').value=''; $('cSal').value="Dear Sir/Ma'am,";
+  $('cAddr').value=''; $('cEmail').value=''; $('cPhone').value='';
+  $('cRef').value=''; $('taxType').value='IGST';
+
+  // Quotation details
+  $('qNo').value=''; $('qDate').value=new Date().toISOString().slice(0,10);
+  $('gst').value=5; $('subj').value='';
+
+  // Proposal narrative
+  $('about').value=CO.about; $('overview').value=''; $('benefits').value='';
+
+  // ROI
+  roiState={};
+
+  // Discounts / GST defaults
+  $('disc').value=0; $('cdisc').value=0; $('cgst').value=5; cgstManuallySet=false;
+
+  // Terms & conditions (back to their original defaults)
+  $('tPay').value='100% Advance Payment along with Purchase Order.';
+  $('tDel').value='3 to 4 Weeks.';
+  $('tWar').value='12 months from date of installation.';
+  $('tVal').value=30; $('tAmc').value='';
+  $('tExtra').value='Installation, commissioning and application training included at no extra cost.\nAll disputes are subject to Delhi jurisdiction.';
+
+  // Seal
+  $('sigOn').checked=true;
+
+  clearAutosave();
+  buildItems();
+  buildLib();
+  sigUI();
+  render();
+  go('edit');
+}
+
 function boot(){
   const s=$('prod'); s.innerHTML='<option value="">\u2014 Select a product \u2014</option>';
   Object.keys(CAT).filter(k=>k).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=CAT[k].n;s.appendChild(o);});
@@ -669,13 +729,15 @@ function applyProduct(){
   const p=CAT[$('prod').value]; if(!p||!p.n)return;
   $('subj').value=p.subj||''; $('overview').value=p.ov||'';
   $('benefits').value=(p.ben||[]).join('\n');
-  items.main=(p.it||[]).map(x=>({...x}));
-  items.cons=(p.cons||[]).map(x=>({...x}));
+  // Keep any items contributed by additional products (tagged _slot);
+  // only the primary product's own items get replaced here.
+  items.main=(p.it||[]).map(x=>({...x})).concat(items.main.filter(it=>it._slot));
+  items.cons=(p.cons||[]).map(x=>({gst:5,disc:0,...x})).concat(items.cons.filter(it=>it._slot));
   if(!items.main.length)items.main=[{d:'',q:1,r:0}];
   const key=$('prod').value;
   if(items.main[0]) items.main[0].img = LIB[key] || '';
   const R=p.roi||{on:false,v:0,p:0,c:0};
-  $('roiOn').checked=R.on; $('roiVol').value=R.v||''; $('roiPrice').value=R.p||''; $('roiCost').value=R.c||'';
+  roiState.primary={on:!!R.on,vol:R.v||'',price:R.p||'',cost:R.c||''};
   $('tWar').value=p.war||''; $('tDel').value=p.del||''; $('tAmc').value=p.amc||''; $('tPay').value=p.pay||'';
   $('tVal').value=p.val||30; $('disc').value=0; $('cdisc').value=0;
   cgstManuallySet=false; syncConsGst_();
@@ -683,12 +745,140 @@ function applyProduct(){
     inbody970:'Inbody',inbody770:'Inbody',pillcam:'CE',camc:'CE',mano:'Mano',digi:'Digi',endoflip:'Endo',fluore:'GM'})[$('prod').value]||'GM';
   $('qNo').value=`Global/${pref}/26-27/`;
   buildItems(); render();
+  updateComboSubject_();
+}
+
+/* Builds "Quotation for A, B, C" when 2+ products are combined; leaves the
+   subject as-is (the primary product's own descriptive subj template)
+   when only one product is selected, matching prior behavior. */
+function updateComboSubject_(){
+  if(extraProductSlots.length<1)return; // single product: leave the subject line alone here
+  const primary=CAT[$('prod').value];
+  const names=[primary&&primary.n].concat(extraProductSlots.map(s=>CAT[s.key]&&CAT[s.key].n)).filter(Boolean);
+  if(names.length>1)$('subj').value='Quotation for '+names.join(', ');
+}
+
+/* ---------- Additional products (combo quotations, up to 5 total) ----------
+   Each additional product's items/consumables are tagged with a _slot id
+   so they can be cleanly added or removed without touching the primary
+   product's own items, or anything else already on the form. */
+function addExtraProductSlot(){
+  if(extraProductSlots.length>=4){alert('Maximum 5 products per quotation (1 main product + up to 4 additional).');return;}
+  const id='ep'+(++extraProductSeq);
+  extraProductSlots.push({id,key:''});
+  const wrap=document.createElement('div');
+  wrap.className='itemblock';
+  wrap.id=id;
+  const opts=Object.keys(CAT).filter(k=>k).map(k=>'<option value="'+k+'">'+esc(CAT[k].n)+'</option>').join('');
+  wrap.innerHTML=`<div class="itemhead"><b>Additional Product</b><button class="del tiny" onclick="removeExtraProductSlot('${id}')">Remove</button></div>
+    <select onchange="applyExtraProduct('${id}',this.value)"><option value="">&#8212; Select a product &#8212;</option>${opts}</select>`;
+  $('extraProducts').appendChild(wrap);
+}
+function applyExtraProduct(slotId,key){
+  // Remove whatever this slot previously contributed (in case the user
+  // changes their mind and picks a different product in the same slot).
+  items.main=items.main.filter(it=>it._slot!==slotId);
+  items.cons=items.cons.filter(it=>it._slot!==slotId);
+  const slot=extraProductSlots.find(s=>s.id===slotId);
+  if(slot)slot.key=key;
+  const p=CAT[key];
+  if(p&&p.n){
+    (p.it||[]).forEach(x=>{
+      const it={...x,_slot:slotId};
+      if(!it.img)it.img=LIB[key]||'';
+      items.main.push(it);
+    });
+    (p.cons||[]).forEach(x=>items.cons.push({gst:5,disc:0,...x,_slot:slotId}));
+    const R=p.roi||{on:false,v:0,p:0,c:0};
+    roiState[slotId]={on:!!R.on,vol:R.v||'',price:R.p||'',cost:R.c||''};
+    // Append this product's overview/benefits as a clearly labelled
+    // continuation, rather than overwriting the primary product's text.
+    if(p.ov){
+      const sep=$('overview').value.trim()?'\n\n':'';
+      $('overview').value+=sep+p.n+':\n'+p.ov;
+    }
+    if(p.ben&&p.ben.length){
+      const sep=$('benefits').value.trim()?'\n':'';
+      $('benefits').value+=sep+p.ben.join('\n');
+    }
+  }else{
+    delete roiState[slotId];
+  }
+  buildItems();render();
+  updateComboSubject_();
+}
+function removeExtraProductSlot(slotId){
+  items.main=items.main.filter(it=>it._slot!==slotId);
+  items.cons=items.cons.filter(it=>it._slot!==slotId);
+  extraProductSlots=extraProductSlots.filter(s=>s.id!==slotId);
+  delete roiState[slotId];
+  const el=document.getElementById(slotId);
+  if(el)el.remove();
+  alert('Removed that product\'s items. If you had appended its text into the Overview/Benefits fields (Section 4), please delete those lines manually \u2014 to protect your own edits, text is never auto-removed.');
+  buildItems();render();
+  if(!extraProductSlots.length){
+    const primary=CAT[$('prod').value];
+    if(primary&&primary.subj)$('subj').value=primary.subj;
+  }
+  updateComboSubject_();
 }
 
 /* ---------- Items UI ---------- */
-function addItem(t){items[t].push({d:'',q:1,r:0});buildItems();render();}
+function addItem(t){
+  const it={d:'',q:1,r:0};
+  if(t==='cons'){it.gst=parseFloat($('cgst').value)||0; it.disc=parseFloat($('cdisc').value)||0;}
+  items[t].push(it);buildItems();render();
+}
 function delItem(t,i){items[t].splice(i,1);if(t==='main'&&!items.main.length)items.main.push({d:'',q:1,r:0});buildItems();render();}
 function upd(t,i,f,v){items[t][i][f]=(f==='d')?v:(parseFloat(v)||0);render();}
+/* ---------- Per-product ROI blocks ----------
+   Builds one ROI UI block per selected product (primary + additionals),
+   in stable order. Existing values in roiState are preserved across
+   rebuilds; only missing keys get their catalogue defaults applied. */
+function roiOrderedKeys_(){
+  return ['primary'].concat(extraProductSlots.map(s=>s.id));
+}
+function roiProductInfo_(key){
+  if(key==='primary')return CAT[$('prod').value];
+  const slot=extraProductSlots.find(s=>s.id===key);
+  return slot?CAT[slot.key]:null;
+}
+function buildRoiBlocks_(){
+  const box=$('roiBlocks'); if(!box)return;
+  const keys=roiOrderedKeys_().filter(k=>roiProductInfo_(k)&&roiProductInfo_(k).n);
+  box.innerHTML=keys.map(key=>{
+    const st=roiState[key]||{on:false,vol:'',price:'',cost:''};
+    const name=roiProductInfo_(key).n;
+    return `<div class="itemblock" data-roi-key="${key}">
+      <div class="itemhead"><b>${esc(name)}</b></div>
+      <label><input type="checkbox" class="roi-on" style="width:auto" ${st.on?'checked':''}> Include ROI for this product</label>
+      <div class="row r3" style="margin-top:8px">
+        <div><label>Tests / month</label><input type="number" class="roi-vol" value="${st.vol!==undefined?st.vol:''}"></div>
+        <div><label>Charge / test (&#8377;)</label><input type="number" class="roi-price" value="${st.price!==undefined?st.price:''}"></div>
+        <div><label>Consumable cost / test (&#8377;)</label><input type="number" class="roi-cost" value="${st.cost!==undefined?st.cost:''}"></div>
+      </div>
+    </div>`;
+  }).join('') || '<div class="hint">Select a product above to see its ROI fields here.</div>';
+
+  box.querySelectorAll('[data-roi-key]').forEach(block=>{
+    const key=block.dataset.roiKey;
+    if(!roiState[key])roiState[key]={on:false,vol:'',price:'',cost:''};
+    const onEl=block.querySelector('.roi-on'), vEl=block.querySelector('.roi-vol'),
+      pEl=block.querySelector('.roi-price'), cEl=block.querySelector('.roi-cost');
+    onEl.onchange=()=>{roiState[key].on=onEl.checked;render();};
+    vEl.oninput=()=>{roiState[key].vol=vEl.value;render();};
+    pEl.oninput=()=>{roiState[key].price=pEl.value;render();};
+    cEl.oninput=()=>{roiState[key].cost=cEl.value;render();};
+  });
+}
+/* Sum of a product's own line items in the main equipment table (used as
+   the "against" cost for its individual payback calculation). */
+function roiCostBasis_(key){
+  return items.main
+    .filter(it=>key==='primary'?!it._slot:it._slot===key)
+    .reduce((s,it)=>s+(it.q*it.r),0);
+}
+
 function buildItems(){
   ['main','cons'].forEach(t=>{
     const c=$(t==='main'?'mainItems':'consItems'); c.innerHTML='';
@@ -701,7 +891,11 @@ function buildItems(){
         <div><label>Qty</label><input type="number" value="${it.q}" step="1"></div>
         <div><label>Rate per Unit (\u20B9)</label><input type="number" value="${it.r}" step="1"></div>
       </div>
-      <div class="imgrow">
+      ${t==='cons'?`<div class="row r2" style="margin-top:7px">
+        <div><label>GST Rate (%)</label><input type="number" class="cons-gst" value="${it.gst!==undefined?it.gst:5}" step="0.01"></div>
+        <div><label>Discount (\u20B9)</label><input type="number" class="cons-disc" value="${it.disc||0}" step="1"></div>
+      </div>`:''}
+      ${t==='main'?`<div class="imgrow">
         <div class="thumb" ${im?`style="background-image:url('${im}')"`:''}>${im?'':'No image'}</div>
         <div class="ib">
           <b>Product image in offer table</b>
@@ -711,29 +905,38 @@ function buildItems(){
             ${im?'<button class="del tiny">Remove image</button>':''}
           </div>
         </div>
-      </div>`;
+      </div>`:''}`;
       const ta=d.querySelector('textarea');
-      const [qi,ri]=d.querySelectorAll('.row input');
+      const [qi,ri]=d.querySelectorAll('.row.r2 input');
       ta.oninput=e=>upd(t,i,'d',e.target.value);
       qi.oninput=e=>upd(t,i,'q',e.target.value);
       ri.oninput=e=>upd(t,i,'r',e.target.value);
-      const ib=d.querySelectorAll('.imgrow button');
-      ib[0].onclick=()=>{
-        const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
-        inp.onchange=e=>readImg(e.target.files[0],data=>{
-          items[t][i].img=data;
-          // if this is the main product's first row, also save it to the library
-          const k=$('prod').value;
-          if(t==='main'&&i===0&&k){LIB[k]=data;libSave();buildLib();}
-          buildItems();render();
-        });
-        inp.click();
-      };
-      if(im)ib[1].onclick=()=>{items[t][i].img='';buildItems();render();};
+      if(t==='cons'){
+        const gi=d.querySelector('.cons-gst'), di=d.querySelector('.cons-disc');
+        if(gi)gi.oninput=e=>upd(t,i,'gst',e.target.value);
+        if(di)di.oninput=e=>upd(t,i,'disc',e.target.value);
+      }
+      if(t==='main'){
+        const ib=d.querySelectorAll('.imgrow button');
+        ib[0].onclick=()=>{
+          const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+          inp.onchange=e=>readImg(e.target.files[0],data=>{
+            items[t][i].img=data;
+            // if this is the main product's first row, also save it to the library
+            const k=$('prod').value;
+            if(i===0&&k){LIB[k]=data;libSave();buildLib();}
+            buildItems();render();
+          });
+          inp.click();
+        };
+        if(im)ib[1].onclick=()=>{items[t][i].img='';buildItems();render();};
+      }
       c.appendChild(d);
     });
     if(!items[t].length)c.innerHTML='<div class="hint">No items.</div>';
   });
+  updateComboSubject_();
+  buildRoiBlocks_();
 }
 
 /* ---------- Utils ---------- */
@@ -774,6 +977,26 @@ function calc(t,dEl,gstEl){
   const rate=parseFloat($(gstEl||'gst').value)||0;
   const tax=net*rate/100;
   return {sub,dis,net,tax,rate,gt:net+tax};
+}
+
+/* Consumables use PER-ITEM GST rate and discount (each row can have its
+   own values), unlike the main items table which uses one shared rate.
+   perItem carries the computed figures for each row so the table can
+   display them; rate is null (not a single number) since rows can differ. */
+function calcCons(){
+  let sub=0,dis=0,tax=0;
+  const perItem=items.cons.map(it=>{
+    const lineSub=(it.q||0)*(it.r||0);
+    const lineDis=parseFloat(it.disc)||0;
+    const lineNet=lineSub-lineDis;
+    const lineRate=parseFloat(it.gst);
+    const lineRateVal=isNaN(lineRate)?0:lineRate;
+    const lineTax=lineNet*lineRateVal/100;
+    sub+=lineSub; dis+=lineDis; tax+=lineTax;
+    return {sub:lineSub,dis:lineDis,net:lineNet,rate:lineRateVal,tax:lineTax};
+  });
+  const net=sub-dis;
+  return {sub,dis,net,tax,rate:null,gt:net+tax,perItem};
 }
 
 /* ---------- Render ---------- */
@@ -818,36 +1041,44 @@ function paginateBlocks_(blocks){
 }
 
 function render(){
-  const M=calc('main','disc'), C=items.cons.length?calc('cons','cdisc','cgst'):null;
+  const M=calc('main','disc'), C=items.cons.length?calcCons():null;
   const igst=$('taxType').value==='IGST';
   const taxRow=x=>igst?`<tr class="sum"><td colspan="3">IGST @ ${x.rate}%</td><td class="n">${R(x.tax)}</td></tr>`
     :`<tr class="sum"><td colspan="3">CGST @ ${(x.rate/2)}%</td><td class="n">${R(x.tax/2)}</td></tr><tr class="sum"><td colspan="3">SGST @ ${(x.rate/2)}%</td><td class="n">${R(x.tax/2)}</td></tr>`;
 
   const tbl=(t,x)=>{
-    const pics=items[t].some(i=>i.img);
+    const pics=t==='main'&&items[t].some(i=>i.img);
+    const perItemTax = x.rate===null; // consumables: each row has its own GST%/discount
     const cs=pics?4:3;  // colspan for summary rows
     return `<table class="qt"><thead><tr>
       ${pics?'<th class="pic">Product</th>':''}
       <th style="width:${pics?'40%':'52%'}">Description</th>
       <th class="n" style="width:9%">Qty</th><th class="n" style="width:19%">Rate (INR)</th><th class="n" style="width:20%">Amount (INR)</th></tr></thead><tbody>
-    ${items[t].map(i=>`<tr>
+    ${items[t].map((i,idx)=>`<tr>
       ${pics?`<td class="pic">${i.img?`<img src="${i.img}" alt="">`:'<span style="font-size:10px;color:#CCC">\u2014</span>'}</td>`:''}
-      <td>${descHTML(i.d)}</td><td class="n">${i.q}</td>
+      <td>${descHTML(i.d)}${perItemTax?`<div style="font-size:10px;color:#777;margin-top:3px">GST: ${i.gst!==undefined?i.gst:0}%${i.disc?' &middot; Discount: '+R(i.disc):''}</div>`:''}</td><td class="n">${i.q}</td>
       <td class="n">${i.r?IN(i.r):'FOC'}</td><td class="n">${i.r?IN(i.q*i.r):'FOC'}</td></tr>`).join('')}
     <tr class="sum"><td colspan="${cs}">Total</td><td class="n">${R(x.sub)}</td></tr>
-    ${x.dis?`<tr class="sum"><td colspan="${cs}">Less: Special Discount</td><td class="n">\u2212 ${R(x.dis)}</td></tr><tr class="sum"><td colspan="${cs}">Sub Total</td><td class="n">${R(x.net)}</td></tr>`:''}
-    ${igst?`<tr class="sum"><td colspan="${cs}">IGST @ ${x.rate}%</td><td class="n">${R(x.tax)}</td></tr>`
-          :`<tr class="sum"><td colspan="${cs}">CGST @ ${x.rate/2}%</td><td class="n">${R(x.tax/2)}</td></tr><tr class="sum"><td colspan="${cs}">SGST @ ${x.rate/2}%</td><td class="n">${R(x.tax/2)}</td></tr>`}
+    ${x.dis?`<tr class="sum"><td colspan="${cs}">Less: Discount${perItemTax?' (all items)':''}</td><td class="n">\u2212 ${R(x.dis)}</td></tr><tr class="sum"><td colspan="${cs}">Sub Total</td><td class="n">${R(x.net)}</td></tr>`:''}
+    ${perItemTax
+      ? (igst?`<tr class="sum"><td colspan="${cs}">GST (per item, blended)</td><td class="n">${R(x.tax)}</td></tr>`
+             :`<tr class="sum"><td colspan="${cs}">CGST (blended)</td><td class="n">${R(x.tax/2)}</td></tr><tr class="sum"><td colspan="${cs}">SGST (blended)</td><td class="n">${R(x.tax/2)}</td></tr>`)
+      : (igst?`<tr class="sum"><td colspan="${cs}">IGST @ ${x.rate}%</td><td class="n">${R(x.tax)}</td></tr>`
+             :`<tr class="sum"><td colspan="${cs}">CGST @ ${x.rate/2}%</td><td class="n">${R(x.tax/2)}</td></tr><tr class="sum"><td colspan="${cs}">SGST @ ${x.rate/2}%</td><td class="n">${R(x.tax/2)}</td></tr>`)}
     <tr class="gt"><td colspan="${cs}">GRAND TOTAL</td><td class="n">${R(x.gt)}</td></tr>
   </tbody></table><div class="words">In words: Rupees ${words(x.gt)} Only.</div>`;
   };
 
   /* ROI */
   let roiHTML='';
-  if($('roiOn').checked){
-    const v=+$('roiVol').value||0,p=+$('roiPrice').value||0,c=+$('roiCost').value||0;
-    const mm=v*(p-c), ym=mm*12, pb=mm>0?(M.gt/mm):0;
-    roiHTML=`<h3>Indicative Return on Investment</h3>
+  roiOrderedKeys_().forEach(key=>{
+    const st=roiState[key];
+    if(!st||!st.on)return;
+    const info=roiProductInfo_(key); if(!info||!info.n)return;
+    const v=+st.vol||0,p=+st.price||0,c=+st.cost||0;
+    const costBasis=roiCostBasis_(key);
+    const mm=v*(p-c), ym=mm*12, pb=mm>0&&costBasis>0?(costBasis/mm):0;
+    roiHTML+=`<h3>Indicative Return on Investment &#8212; ${esc(info.n)}</h3>
     <p>The figures below are an illustration based on the volumes and tariff indicated during discussion. Actual returns will vary with case-mix and pricing policy.</p>
     <div class="roi"><table>
       <tr><td>Estimated tests per month</td><td>${v}</td></tr>
@@ -856,10 +1087,10 @@ function render(){
       <tr><td>Net contribution per test</td><td>${R(p-c)}</td></tr>
       <tr><td>Estimated monthly contribution</td><td>${R(mm)}</td></tr>
       <tr><td>Estimated annual contribution</td><td>${R(ym)}</td></tr>
-      <tr class="hi"><td><b>Indicative payback period</b></td><td>${mm>0?(pb<1?'Under 1 month':pb.toFixed(1)+' months'):'\u2014'}</td></tr>
+      <tr class="hi"><td><b>Indicative payback period</b></td><td>${mm>0&&costBasis>0?(pb<1?'Under 1 month':pb.toFixed(1)+' months'):'\u2014'}</td></tr>
     </table></div>
-    <p style="font-size:10.5px;color:#777">Note: Payback is computed against the Grand Total of the main equipment table and excludes taxes recoverable as input credit, financing cost and staff time. It is indicative and does not constitute a financial guarantee.</p>`;
-  }
+    <p style="font-size:10.5px;color:#777">Note: Payback is computed against this product's own equipment cost in the Commercial Offer table, and excludes taxes recoverable as input credit, financing cost and staff time. It is indicative and does not constitute a financial guarantee.</p>`;
+  });
 
   const bl=$('benefits').value.split('\n').filter(x=>x.trim());
   const ab=$('about').value.split('\n').filter(x=>x.trim());
@@ -955,11 +1186,13 @@ function checklist(M,C){
   if(!$('tDel').value.trim())           w.push('Delivery timeline is blank.');
   if(!$('tWar').value.trim())           w.push('Warranty is blank.');
   if((parseFloat($('gst').value)||0)===0) w.push('GST rate is 0% \u2014 confirm this is intended.');
-  if($('roiOn').checked){
-    const v=+$('roiVol').value||0,p=+$('roiPrice').value||0,c=+$('roiCost').value||0;
-    if(!v||!p)                          w.push('ROI section is switched on but tests/month or charge per test is 0.');
-    else if(p<=c)                       w.push('ROI shows a negative or zero contribution per test \u2014 check the charge and consumable cost.');
-  }
+  roiOrderedKeys_().forEach(key=>{
+    const st=roiState[key]; if(!st||!st.on)return;
+    const info=roiProductInfo_(key); const label=info&&info.n?' ('+info.n+')':'';
+    const v=+st.vol||0,p=+st.price||0,c=+st.cost||0;
+    if(!v||!p)                          w.push('ROI is switched on'+label+' but tests/month or charge per test is 0.');
+    else if(p<=c)                       w.push('ROI shows a negative or zero contribution per test'+label+' \u2014 check the charge and consumable cost.');
+  });
   const addr=($('cAddr').value||'').toLowerCase();
   if($('taxType').value==='IGST' && /delhi/.test(addr))
     w.push('Customer address mentions Delhi but tax type is IGST \u2014 an intra-state supply would normally be CGST + SGST.');
@@ -974,23 +1207,43 @@ function checklist(M,C){
     ? '<div class="checkbox"><b>\u26A0 Check before sending \u2014 '+w.length+' item'+(w.length>1?'s':'')+'</b><ul>'+w.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>'
     : '<div class="checkbox ok"><b>\u2713 Ready to send</b>Nothing missing. Review the document below, then export as PDF or Word.</div>';
 }
-['cName','cSal','cAddr','cRef','taxType','qNo','qDate','about','overview','benefits','tExtra','roiOn'].forEach(id=>{
+['cName','cSal','cAddr','cRef','taxType','qNo','qDate','about','overview','benefits','tExtra'].forEach(id=>{
   $(id).addEventListener('input',render); $(id).addEventListener('change',render);
 });
 
 /* ---------- Form serialize/restore (used only by autosave now) ---------- */
 const F=['prod','cName','cSal','cAddr','cRef','taxType','qNo','qDate','gst','subj','about','overview','benefits',
-'roiVol','roiPrice','roiCost','disc','cdisc','tPay','tDel','tWar','tVal','tAmc','tExtra'];
+'disc','cdisc','cgst','tPay','tDel','tWar','tVal','tAmc','tExtra'];
 
 function serializeForm(){
-  const o={items:items,roiOn:$('roiOn').checked,sigOn:$('sigOn').checked};
+  const o={items:items,roiState:roiState,extraProductSlots:extraProductSlots,sigOn:$('sigOn').checked};
   F.forEach(k=>o[k]=$(k).value);
   return o;
 }
 function applyFormData(o){
   F.forEach(k=>{if(o[k]!==undefined)$(k).value=o[k];});
-  $('roiOn').checked=!!o.roiOn; if(o.sigOn!==undefined)$('sigOn').checked=!!o.sigOn;
+  if(o.sigOn!==undefined)$('sigOn').checked=!!o.sigOn;
   if(o.items)items=o.items;
+  roiState=o.roiState||{};
+
+  // Rebuild additional-product slot UI using the SAME ids already present
+  // in the restored items' _slot tags, so everything lines back up.
+  extraProductSlots.forEach(s=>{const el=document.getElementById(s.id); if(el)el.remove();});
+  extraProductSlots=(o.extraProductSlots||[]).map(s=>({id:s.id,key:s.key}));
+  extraProductSlots.forEach(s=>{
+    const wrap=document.createElement('div');
+    wrap.className='itemblock'; wrap.id=s.id;
+    const opts=Object.keys(CAT).filter(k=>k).map(k=>'<option value="'+k+'">'+esc(CAT[k].n)+'</option>').join('');
+    wrap.innerHTML=`<div class="itemhead"><b>Additional Product</b><button class="del tiny" onclick="removeExtraProductSlot('${s.id}')">Remove</button></div>
+      <select onchange="applyExtraProduct('${s.id}',this.value)"><option value="">&#8212; Select a product &#8212;</option>${opts}</select>`;
+    $('extraProducts').appendChild(wrap);
+    const sel=wrap.querySelector('select'); if(sel)sel.value=s.key;
+  });
+  extraProductSlots.forEach(s=>{
+    const num=parseInt(String(s.id).replace('ep',''),10);
+    if(!isNaN(num)&&num>extraProductSeq)extraProductSeq=num;
+  });
+
   buildItems();render();
 }
 
@@ -1058,7 +1311,7 @@ async function makeDocx(){
   }
 
   function qTable(t,x){
-    const pics=items[t].some(i=>i.img);
+    const pics=t==='main'&&items[t].some(i=>i.img);
     const CW=pics?CW_P:CW_N;
     const D0=pics?1:0;                    // index offset of Description column
     const igst=$('taxType').value==='IGST';
@@ -1070,8 +1323,12 @@ async function makeDocx(){
       cell('Amount (INR)',{w:CW[D0+3],b:1,sh:NAVY,c:'FFFFFF',a:AlignmentType.RIGHT}));
     const rows=[new TableRow({tableHeader:true,children:hdr})];
 
+    const perItemTax = x.rate===null; // consumables: each row has its own GST%/discount
     items[t].forEach(i=>{
       const L=(i.d||'').split('\n').filter(z=>z.trim());
+      if(perItemTax){
+        L.push('GST: '+(i.gst!==undefined?i.gst:0)+'%'+(i.disc?' | Discount: \u20B9 '+IN(i.disc):''));
+      }
       const cs=[];
       if(pics)cs.push(picCell(i.img,CW[0]));
       cs.push(cell(L.length?L:[''],{w:CW[D0]}),cell(i.q,{w:CW[D0+1],a:AlignmentType.RIGHT}),
@@ -1089,14 +1346,19 @@ async function makeDocx(){
       return new TableRow({children:cs});
     };
     rows.push(sum('Total','\u20B9 '+IN(x.sub)));
-    if(x.dis){rows.push(sum('Less: Special Discount','\u2212 \u20B9 '+IN(x.dis)));rows.push(sum('Sub Total','\u20B9 '+IN(x.net)));}
-    if(igst)rows.push(sum(`IGST @ ${x.rate}%`,'\u20B9 '+IN(x.tax)));
-    else{rows.push(sum(`CGST @ ${x.rate/2}%`,'\u20B9 '+IN(x.tax/2)));rows.push(sum(`SGST @ ${x.rate/2}%`,'\u20B9 '+IN(x.tax/2)));}
+    if(x.dis){rows.push(sum('Less: Discount'+(perItemTax?' (all items)':''),'\u2212 \u20B9 '+IN(x.dis)));rows.push(sum('Sub Total','\u20B9 '+IN(x.net)));}
+    if(perItemTax){
+      if(igst)rows.push(sum('GST (per item, blended)','\u20B9 '+IN(x.tax)));
+      else{rows.push(sum('CGST (blended)','\u20B9 '+IN(x.tax/2)));rows.push(sum('SGST (blended)','\u20B9 '+IN(x.tax/2)));}
+    }else{
+      if(igst)rows.push(sum(`IGST @ ${x.rate}%`,'\u20B9 '+IN(x.tax)));
+      else{rows.push(sum(`CGST @ ${x.rate/2}%`,'\u20B9 '+IN(x.tax/2)));rows.push(sum(`SGST @ ${x.rate/2}%`,'\u20B9 '+IN(x.tax/2)));}
+    }
     rows.push(sum('GRAND TOTAL','\u20B9 '+IN(x.gt),{sh:NAVY,c:'FFFFFF'}));
     return new Table({columnWidths:CW,width:{size:W,type:WidthType.DXA},rows});
   }
 
-  const M=calc('main','disc'), C=items.cons.length?calc('cons','cdisc','cgst'):null;
+  const M=calc('main','disc'), C=items.cons.length?calcCons():null;
   const k=[];
   // Letterhead is applied as a FIRST-PAGE background (see firstPageHeader below),
   // so nothing is pushed inline here \u2014 content simply starts inside the safe area.
@@ -1122,10 +1384,13 @@ async function makeDocx(){
   const bl=$('benefits').value.split('\n').filter(x=>x.trim());
   if(bl.length){k.push(H('Clinical & Operational Benefits'));bl.forEach(x=>k.push(P(x,{bu:1,sp:60})));}
 
-  if($('roiOn').checked){
-    const v=+$('roiVol').value||0,p=+$('roiPrice').value||0,c=+$('roiCost').value||0,mm=v*(p-c);
-    const pb=mm>0?(M.gt/mm):0;
-    k.push(H('Indicative Return on Investment'));
+  roiOrderedKeys_().forEach(key=>{
+    const st=roiState[key]; if(!st||!st.on)return;
+    const info=roiProductInfo_(key); if(!info||!info.n)return;
+    const v=+st.vol||0,p=+st.price||0,c=+st.cost||0,mm=v*(p-c);
+    const costBasis=roiCostBasis_(key);
+    const pb=mm>0&&costBasis>0?(costBasis/mm):0;
+    k.push(H('Indicative Return on Investment \u2014 '+info.n));
     k.push(P('The figures below are an illustration based on the volumes and tariff indicated during discussion. Actual returns will vary with case-mix and pricing policy.',{a:AlignmentType.JUSTIFIED}));
     const RW=[6200,3160];
     const rr=(a,b,o={})=>new TableRow({children:[cell(a,{w:RW[0],sh:CREAM,b:o.b}),cell(b,{w:RW[1],sh:CREAM,b:1,c:NAVY,a:AlignmentType.RIGHT})]});
@@ -1133,9 +1398,9 @@ async function makeDocx(){
       rr('Estimated tests per month',String(v)),rr('Patient charge per test','\u20B9 '+IN(p)),
       rr('Consumable / running cost per test','\u20B9 '+IN(c)),rr('Net contribution per test','\u20B9 '+IN(p-c)),
       rr('Estimated monthly contribution','\u20B9 '+IN(mm)),rr('Estimated annual contribution','\u20B9 '+IN(mm*12)),
-      rr('Indicative payback period',mm>0?(pb<1?'Under 1 month':pb.toFixed(1)+' months'):'\u2014',{b:1})]}));
-    k.push(P('Note: Payback is computed against the Grand Total of the main equipment table and excludes taxes recoverable as input credit, financing cost and staff time. It is indicative and does not constitute a financial guarantee.',{s:17,c:'777777',sb:80}));
-  }
+      rr('Indicative payback period',mm>0&&costBasis>0?(pb<1?'Under 1 month':pb.toFixed(1)+' months'):'\u2014',{b:1})]}));
+    k.push(P('Note: Payback is computed against this product\'s own equipment cost in the Commercial Offer table and excludes taxes recoverable as input credit, financing cost and staff time. It is indicative and does not constitute a financial guarantee.',{s:17,c:'777777',sb:80}));
+  });
 
   k.push(H('Commercial Offer'));
   k.push(qTable('main',M));
@@ -1213,7 +1478,7 @@ async function makeDocx(){
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyvxNsZTC3FL-V3VsyXqZVZZR43je8lgBq2bnYCFkIJjbyazXbnxJgV2RLEqr4rJxE/exec';
 
 function buildBackendPayload(){
-  const M=calc('main','disc'), C=items.cons.length?calc('cons','cdisc','cgst'):null;
+  const M=calc('main','disc'), C=items.cons.length?calcCons():null;
   const mainItems=items.main.map(it=>({description:it.d,qty:it.q,rate:it.r}));
   const consItems=items.cons.map(it=>({description:'[Consumable] '+it.d,qty:it.q,rate:it.r}));
   const terms=[
@@ -1230,8 +1495,11 @@ function buildBackendPayload(){
     email:$('cEmail').value||'',
     phone:$('cPhone').value||'',
     subject:$('subj').value||'',
-    productName:($('prod').selectedOptions[0]&&$('prod').selectedOptions[0].text)||'',
+    productName:[($('prod').selectedOptions[0]&&$('prod').selectedOptions[0].text)||'']
+      .concat(extraProductSlots.map(s=>CAT[s.key]&&CAT[s.key].n).filter(Boolean))
+      .filter(Boolean).join(', '),
     productKey:$('prod').value||'',
+    productKeys:[$('prod').value].concat(extraProductSlots.map(s=>s.key)).filter(Boolean),
     quotationNo:$('qNo').value||'',
     items:mainItems.concat(consItems),
     totalAmount:M.gt+(C?C.gt:0),
