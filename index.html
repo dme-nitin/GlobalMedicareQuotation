@@ -245,6 +245,9 @@ body.mode-pv  #pvPane{display:block}
       <div><label>Email</label><input id="cEmail" type="email" placeholder="customer@hospital.com"></div>
       <div><label>Phone</label><input id="cPhone" type="tel" placeholder="98xxxxxxxx"></div>
     </div>
+    <label>Email CC <span class="pill">optional</span></label>
+    <input id="cEmailCC" type="text" placeholder="Enter CC email(s), separated by commas">
+    <div class="hint">Extra recipients who should be CC'd on the quotation email, e.g. example1@gmail.com, example2@gmail.com</div>
     <div class="row r2">
       <div><label>Reference (optional)</label><input id="cRef" placeholder="Discussion with Dr. ..."></div>
       <div><label>Tax Type</label><select id="taxType"><option>IGST</option><option>GST (CGST+SGST)</option></select></div>
@@ -695,7 +698,7 @@ function clearForm(){
 
   // Customer
   $('cName').value=''; $('cSal').value="Dear Sir/Ma'am,";
-  $('cAddr').value=''; $('cEmail').value=''; $('cPhone').value='';
+  $('cAddr').value=''; $('cEmail').value=''; $('cPhone').value=''; $('cEmailCC').value='';
   $('cRef').value=''; $('taxType').value='IGST';
 
   // Quotation details
@@ -1278,7 +1281,7 @@ function checklist(M,C){
 });
 
 /* ---------- Form serialize/restore (used only by autosave now) ---------- */
-const F=['prod','cName','cSal','cAddr','cRef','taxType','qNo','qDate','gst','subj','about','overview','benefits',
+const F=['prod','cName','cSal','cAddr','cEmail','cPhone','cEmailCC','cRef','taxType','qNo','qDate','gst','subj','about','overview','benefits',
 'disc','cdisc','cgst','tPay','tDel','tWar','tVal','tAmc','tExtra'];
 
 function serializeForm(){
@@ -1565,6 +1568,7 @@ function buildBackendPayload(){
     customerName:$('cName').value||'',
     companyName:$('cName').value||'',
     email:$('cEmail').value||'',
+    emailCC:$('cEmailCC').value||'',
     phone:$('cPhone').value||'',
     subject:$('subj').value||'',
     productName:[($('prod').selectedOptions[0]&&$('prod').selectedOptions[0].text)||'']
@@ -1629,7 +1633,16 @@ async function emailQuotationToCustomer(){
     alert('Please enter the customer\'s email address (Customer card, section 2) before sending.');
     return;
   }
-  if(!confirm('Send this quotation by email to '+email+'?\n\nThis emails a PDF directly to the customer \u2014 double-check the details on the Preview below before confirming.'))return;
+  const ccRaw=$('cEmailCC').value.trim();
+  const ccList=ccRaw?ccRaw.split(',').map(x=>x.trim()).filter(Boolean):[];
+  const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const badCC=ccList.filter(x=>!emailPattern.test(x));
+  if(badCC.length){
+    alert('This CC email doesn\'t look valid: "'+badCC[0]+'"\n\nPlease check the Email CC field (comma-separated addresses).');
+    return;
+  }
+  const ccNote=ccList.length?('\n\nCC: '+ccList.join(', ')):'';
+  if(!confirm('Send this quotation by email to '+email+'?'+ccNote+'\n\nThis emails a PDF directly to the customer \u2014 double-check the details on the Preview below before confirming.'))return;
   statusEl.textContent='Rendering PDF\u2026';
   try{
     render();
