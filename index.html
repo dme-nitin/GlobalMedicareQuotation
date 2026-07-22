@@ -181,7 +181,8 @@ body.mode-pv  #pvPane{display:block}
 <div class="tabs">
   <button class="tab on" id="tabE" onclick="go('edit')">&#9999;&#65039; Edit Quotation</button>
   <button class="tab"    id="tabP" onclick="go('pv')">&#128065; Preview <span class="dot" id="wc" style="display:none">0</span></button>
-  <button class="tab" style="margin-left:auto;background:rgba(255,255,255,.14)" onclick="clearForm()">&#128465;&#65039; Clear Form</button>
+  <button class="tab" style="margin-left:auto;background:rgba(255,255,255,.14)" onclick="loadSavedQuotation()">&#128194; Load Saved Quotation</button>
+  <button class="tab" style="background:rgba(255,255,255,.14)" onclick="clearForm()">&#128465;&#65039; Clear Form</button>
 </div>
 
 <!-- ================= PREVIEW PANE ================= -->
@@ -660,6 +661,29 @@ function exportSig(){
    Resets every field, all products, all items and the seal checkbox back
    to a fresh, initial-load state. Also wipes the autosave, so nothing
    comes back on the next page load either. */
+/* Lets the user pick the .json file downloaded from a "Quotation Edit
+   Link" (Google Sheet, column K) and pre-fills the whole form from it -
+   the same restore logic used by autosave. */
+function loadSavedQuotation(){
+  const input=document.createElement('input');
+  input.type='file'; input.accept='.json';
+  input.onchange=e=>{
+    const file=e.target.files[0]; if(!file)return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try{
+        const data=JSON.parse(reader.result);
+        applyFormData(data);
+        alert('Quotation loaded. You can now make your changes and re-save/re-email as usual.');
+      }catch(err){
+        alert('Could not read that file \u2014 make sure it\'s the .json file downloaded from a Quotation Edit Link.');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
 function clearForm(){
   if(!confirm('Are you sure you want to clear the entire form? This cannot be undone.'))return;
 
@@ -1551,7 +1575,8 @@ function buildBackendPayload(){
     quotationNo:$('qNo').value||'',
     items:mainItems.concat(consItems),
     totalAmount:M.gt+(C?C.gt:0),
-    terms:terms
+    terms:terms,
+    formDataJson:JSON.stringify(serializeForm())
   };
 }
 
