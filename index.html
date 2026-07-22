@@ -440,6 +440,12 @@ const CAT = {
  it:[{d:"InBody Device \u2014 Model: 770\nMake: Korea\nParameters: Body Composition Analysis (incl. FLM, SLM), Muscle Fat Analysis, Obesity Analysis, ECW Ratio, Phase Angle, Segmental Lean Analysis\nHSN: 90189099",q:1,r:2200000}],
  roi:{on:true,v:200,p:700,c:60}, war:"1 Year standard warranty on device.", del:"3 to 4 Weeks.", amc:"", pay:"100% Advance along with Purchase Order."},
 
+"inbody380":{n:"InBody 380 Body Composition Analyzer",subj:"Quotation for InBody 380",
+ ov:"The InBody 380 is the research-grade flagship of the InBody range \u2014 a multi-frequency, direct-segmental bioelectrical impedance analyser delivering clinically validated body composition without empirical estimation.",
+ ben:["Direct Segmental Multi-Frequency BIA \u2014 no empirical estimation, no population-average assumptions","Full parameter set: body composition, muscle-fat analysis, obesity analysis, ECW ratio, phase angle","Phase Angle and ECW ratio support nutritional risk and fluid-status assessment in critical care and dialysis","Customisable body composition history for longitudinal patient tracking","Test completes in approximately 60 seconds \u2014 fits a busy OPD","Anchors nutrition, bariatric, sports medicine and dialysis service lines"],
+ it:[{d:"InBody Device \u2014 Model: 380\nMake: Korea\nParameters: Body Composition Analysis (incl. FLM, SLM), Muscle Fat Analysis, Obesity Analysis, ECW Ratio, Phase Angle, Body Composition History (customisable)\nHSN: 90189099",q:1,r:800000}],
+ roi:{on:true,v:200,p:700,c:60}, war:"1 Year standard warranty on device.", del:"3 to 4 Weeks.", amc:"", pay:"100% Advance along with Purchase Order."},
+
 "pillcam":{n:"PillCam Capsule Endoscopy (Medtronic)",subj:"Quotation for PillCam Capsule Endoscopy System by Medtronic",
  ov:"PillCam Capsule Endoscopy from Medtronic enables complete visualisation of the small bowel \u2014 the segment that neither upper endoscopy nor colonoscopy can reach. It is the definitive tool for obscure GI bleeding, suspected Crohn's disease and small-bowel tumour surveillance. Global Medicare is an authorised distributor for Medtronic's GI Solutions portfolio.",
  ben:["Complete small-bowel visualisation \u2014 reaches where conventional endoscopy cannot","Ingestible, ambulatory, sedation-free; the patient continues a normal day during recording","First-line modality for obscure GI bleeding as per current society guidance","RAPID v9 software with automated lesion-detection support accelerates read time","Establishes a differentiated small-bowel service line with strong referral pull","Backed by Medtronic's global service infrastructure and Global Medicare's local support"],
@@ -742,7 +748,7 @@ function applyProduct(){
   $('tVal').value=p.val||30; $('disc').value=0; $('cdisc').value=0;
   cgstManuallySet=false; syncConsGst_();
   const pref=({fibro630:'Fibro',fibro530:'Fibro',fibro430:'Fibro',cholang:'CBD',abt:'ABT',hbt:'HBT',hepa:'Hepa',
-    inbody970:'Inbody',inbody770:'Inbody',pillcam:'CE',camc:'CE',mano:'Mano',digi:'Digi',endoflip:'Endo',fluore:'GM'})[$('prod').value]||'GM';
+    inbody970:'Inbody',inbody770:'Inbody',inbody380:'Inbody',pillcam:'CE',camc:'CE',mano:'Mano',digi:'Digi',endoflip:'Endo',fluore:'GM'})[$('prod').value]||'GM';
   $('qNo').value=`Global/${pref}/26-27/`;
   buildItems(); render();
   updateComboSubject_();
