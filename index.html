@@ -69,7 +69,7 @@ button{cursor:pointer;font:inherit;font-weight:600;border-radius:6px;border:none
 .qt{width:100%;border-collapse:collapse;font-family:"Segoe UI",Arial;font-size:11.5px;margin:8px 0}
 .qt th{background:var(--navy);color:#fff;padding:7px 8px;text-align:center;vertical-align:middle;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px}
 .qt th.n{text-align:center}
-.qt td.n{text-align:right}
+.qt td.n{text-align:center}
 .qt td{border:1px solid #DDD;padding:7px 8px;vertical-align:top}
 .qt tr.sum td{background:var(--bg);font-weight:600}
 .qt tr.gt td{background:var(--navy);color:#fff;font-weight:700;font-size:13px}
@@ -1436,11 +1436,11 @@ async function makeDocx(){
       }
       const cs=[];
       if(pics)cs.push(picCell(i.img,CW[0]));
-      cs.push(cell(L.length?L:[''],{w:CW[D0]}),cell(i.q,{w:CW[D0+1],a:AlignmentType.RIGHT}),
-        cell(i.r?IN(i.r):'FOC',{w:CW[D0+2],a:AlignmentType.RIGHT}));
+      cs.push(cell(L.length?L:[''],{w:CW[D0]}),cell(i.q,{w:CW[D0+1],a:AlignmentType.CENTER}),
+        cell(i.r?IN(i.r):'FOC',{w:CW[D0+2],a:AlignmentType.CENTER}));
       if(dc){const dv=(i.r&&parseFloat(i.disc))?Math.min(parseFloat(i.disc),i.q*i.r):0;
-        cs.push(cell(dv?IN(dv):'-',{w:CW[D0+3],a:AlignmentType.RIGHT}));}
-      cs.push(cell(i.r?IN(dc?(i.q*i.r-Math.min(parseFloat(i.disc)||0,i.q*i.r)):i.q*i.r):'FOC',{w:CW[AI],a:AlignmentType.RIGHT}));
+        cs.push(cell(dv?IN(dv):'-',{w:CW[D0+3],a:AlignmentType.CENTER}));}
+      cs.push(cell(i.r?IN(dc?(i.q*i.r-Math.min(parseFloat(i.disc)||0,i.q*i.r)):i.q*i.r):'FOC',{w:CW[AI],a:AlignmentType.CENTER}));
       rows.push(new TableRow({children:cs}));
     });
 
@@ -1450,7 +1450,7 @@ async function makeDocx(){
       if(pics)cs.push(cell('',{w:CW[0],sh}));
       cs.push(cell(lbl,{w:CW[D0],b:1,sh,c:o.c}),cell('',{w:CW[D0+1],sh}),cell('',{w:CW[D0+2],sh}));
       if(dc)cs.push(cell('',{w:CW[D0+3],sh}));
-      cs.push(cell(val,{w:CW[AI],b:1,sh,c:o.c,a:AlignmentType.RIGHT}));
+      cs.push(cell(val,{w:CW[AI],b:1,sh,c:o.c,a:AlignmentType.CENTER}));
       return new TableRow({children:cs});
     };
     rows.push(sum('Total','\u20B9 '+IN(dc?x.net:x.sub)));
