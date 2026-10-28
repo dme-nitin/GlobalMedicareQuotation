@@ -67,8 +67,9 @@ button{cursor:pointer;font:inherit;font-weight:600;border-radius:6px;border:none
 .page ul{margin:0 0 9px;padding-left:18px}.page li{margin-bottom:4px}
 .subj{background:var(--bg);border-left:4px solid var(--accent);padding:8px 12px;font-weight:700;margin:12px 0}
 .qt{width:100%;border-collapse:collapse;font-family:"Segoe UI",Arial;font-size:11.5px;margin:8px 0}
-.qt th{background:var(--navy);color:#fff;padding:7px 8px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px}
-.qt th.n,.qt td.n{text-align:right}
+.qt th{background:var(--navy);color:#fff;padding:7px 8px;text-align:center;vertical-align:middle;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px}
+.qt th.n{text-align:center}
+.qt td.n{text-align:right}
 .qt td{border:1px solid #DDD;padding:7px 8px;vertical-align:top}
 .qt tr.sum td{background:var(--bg);font-weight:600}
 .qt tr.gt td{background:var(--navy);color:#fff;font-weight:700;font-size:13px}
@@ -285,8 +286,9 @@ body.mode-pv  #pvPane{display:block}
     <h2>6 &#183; Main Equipment Table</h2>
     <div id="mainItems"></div>
     <button class="btn2 tiny" onclick="addItem('main')">+ Add Line Item</button>
-    <label style="margin-top:12px">Special Discount (&#8377;)</label>
-    <input type="number" id="disc" value="0" oninput="render()">
+    <div id="globalDiscWrap"><label style="margin-top:12px">Special Discount (&#8377;)</label>
+    <input type="number" id="disc" value="0" oninput="render()"></div>
+    <div class="hint" id="multiDiscHint" style="display:none">Multiple products selected: enter the discount separately under each Item above. It is shown in its own Discount column and the combined &quot;Less: Discount&quot; row is not used.</div>
   </div>
 
   <div class="card">
@@ -947,6 +949,10 @@ function buildItems(){
         <div><label>Qty</label><input type="number" value="${it.q}" step="1"></div>
         <div><label>Rate per Unit (\u20B9)</label><input type="number" value="${it.r}" step="1"></div>
       </div>
+      ${(t==='main'&&multiDisc_())?`<div class="row r2" style="margin-top:7px">
+        <div><label>Discount (\u20B9)</label><input type="number" class="main-disc" value="${it.disc||0}" step="1" min="0"></div>
+        <div></div>
+      </div>`:''}
       ${t==='cons'?`<div class="row r2" style="margin-top:7px">
         <div><label>GST Rate (%)</label><input type="number" class="cons-gst" value="${it.gst!==undefined?it.gst:5}" step="0.01"></div>
         <div><label>Discount (\u20B9)</label><input type="number" class="cons-disc" value="${it.disc||0}" step="1"></div>
@@ -967,6 +973,10 @@ function buildItems(){
       ta.oninput=e=>upd(t,i,'d',e.target.value);
       qi.oninput=e=>upd(t,i,'q',e.target.value);
       ri.oninput=e=>upd(t,i,'r',e.target.value);
+      if(t==='main'){
+        const mdi=d.querySelector('.main-disc');
+        if(mdi)mdi.oninput=e=>upd(t,i,'disc',e.target.value);
+      }
       if(t==='cons'){
         const gi=d.querySelector('.cons-gst'), di=d.querySelector('.cons-disc');
         if(gi)gi.oninput=e=>upd(t,i,'gst',e.target.value);
@@ -991,6 +1001,9 @@ function buildItems(){
     });
     if(!items[t].length)c.innerHTML='<div class="hint">No items.</div>';
   });
+  const md=multiDisc_();
+  if($('globalDiscWrap'))$('globalDiscWrap').style.display=md?'none':'';
+  if($('multiDiscHint'))$('multiDiscHint').style.display=md?'':'none';
   updateComboSubject_();
   buildRoiBlocks_();
 }
@@ -1054,9 +1067,11 @@ function descHTML(d){
 }
 
 /* ---------- Calc ---------- */
+/* Multi-product mode: 2+ products chosen -> discount is entered per main item. */
+function multiDisc_(){return extraProductSlots.some(s=>s.key);}
 function calc(t,dEl,gstEl){
   const sub=items[t].reduce((s,i)=>s+(i.q*i.r),0);
-  const dis=parseFloat($(dEl).value)||0;
+  const dis=(t==='main'&&multiDisc_())?items[t].reduce((s,i)=>s+Math.min(parseFloat(i.disc)||0,(i.q*i.r)||0),0):(parseFloat($(dEl).value)||0);
   const net=sub-dis;
   const rate=parseFloat($(gstEl||'gst').value)||0;
   const tax=net*rate/100;
@@ -1133,17 +1148,18 @@ function render(){
   const tbl=(t,x)=>{
     const pics=t==='main'&&items[t].some(i=>i.img);
     const perItemTax = x.rate===null; // consumables: each row has its own GST%/discount
-    const cs=pics?4:3;  // colspan for summary rows
+    const dc=(t==='main'&&multiDisc_()); // per-item Discount column (multi-product)
+    const cs=(pics?4:3)+(dc?1:0);  // colspan for summary rows
     return `<table class="qt"><thead><tr>
       ${pics?'<th class="pic">Product</th>':''}
-      <th style="width:${pics?'40%':'52%'}">Description</th>
-      <th class="n" style="width:9%">Qty</th><th class="n" style="width:19%">Rate (INR)</th><th class="n" style="width:20%">Amount (INR)</th></tr></thead><tbody>
+      <th style="width:${pics?(dc?'31%':'40%'):(dc?'40%':'52%')}">Description</th>
+      <th class="n" style="width:${dc?'8%':'9%'}">Qty</th><th class="n" style="width:${dc?'16%':'19%'}">Rate (INR)</th>${dc?'<th class="n" style="width:16%">Discount (INR)</th>':''}<th class="n" style="width:20%">Amount (INR)</th></tr></thead><tbody>
     ${items[t].map((i,idx)=>`<tr>
       ${pics?`<td class="pic">${i.img?`<img src="${i.img}" alt="">`:'<span style="font-size:10px;color:#CCC">\u2014</span>'}</td>`:''}
       <td>${descHTML(i.d)}${perItemTax?`<div style="font-size:10px;color:#777;margin-top:3px">GST: ${i.gst!==undefined?i.gst:0}%${i.disc?' &middot; Discount: '+R(i.disc):''}</div>`:''}</td><td class="n">${i.q}</td>
-      <td class="n">${i.r?IN(i.r):'FOC'}</td><td class="n">${i.r?IN(i.q*i.r):'FOC'}</td></tr>`).join('')}
-    <tr class="sum"><td colspan="${cs}">Total</td><td class="n">${R(x.sub)}</td></tr>
-    ${x.dis?`<tr class="sum"><td colspan="${cs}">Less: Discount${perItemTax?' (all items)':''}</td><td class="n">\u2212 ${R(x.dis)}</td></tr><tr class="sum"><td colspan="${cs}">Sub Total</td><td class="n">${R(x.net)}</td></tr>`:''}
+      <td class="n">${i.r?IN(i.r):'FOC'}</td>${dc?`<td class="n">${(i.r&&parseFloat(i.disc))?IN(Math.min(parseFloat(i.disc),i.q*i.r)):'-'}</td>`:''}<td class="n">${i.r?IN(dc?(i.q*i.r-Math.min(parseFloat(i.disc)||0,i.q*i.r)):i.q*i.r):'FOC'}</td></tr>`).join('')}
+    <tr class="sum"><td colspan="${cs}">Total</td><td class="n">${R(dc?x.net:x.sub)}</td></tr>
+    ${(x.dis&&!dc)?`<tr class="sum"><td colspan="${cs}">Less: Discount${perItemTax?' (all items)':''}</td><td class="n">\u2212 ${R(x.dis)}</td></tr><tr class="sum"><td colspan="${cs}">Sub Total</td><td class="n">${R(x.net)}</td></tr>`:''}
     ${perItemTax
       ? (igst?`<tr class="sum"><td colspan="${cs}">GST (per item, blended)</td><td class="n">${R(x.tax)}</td></tr>`
              :`<tr class="sum"><td colspan="${cs}">CGST (blended)</td><td class="n">${R(x.tax/2)}</td></tr><tr class="sum"><td colspan="${cs}">SGST (blended)</td><td class="n">${R(x.tax/2)}</td></tr>`)
@@ -1380,6 +1396,8 @@ async function makeDocx(){
 
   const CW_P=[1750,3250,760,1750,1850];   // with picture column
   const CW_N=[4700,900,1780,1980];        // no pictures
+  const CW_PD=[1500,2500,650,1500,1500,1710]; // pictures + discount column
+  const CW_ND=[3700,800,1600,1560,1700];      // no pictures + discount column
   const b64=d=>{const s=atob(String(d).split(',')[1]||'');const a=new Uint8Array(s.length);
     for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a;};
   function picCell(data,w){
@@ -1396,15 +1414,18 @@ async function makeDocx(){
 
   function qTable(t,x){
     const pics=t==='main'&&items[t].some(i=>i.img);
-    const CW=pics?CW_P:CW_N;
+    const dc=(t==='main'&&multiDisc_());
+    const CW=pics?(dc?CW_PD:CW_P):(dc?CW_ND:CW_N);
     const D0=pics?1:0;                    // index offset of Description column
+    const AI=D0+(dc?4:3);                 // index of Amount column
     const igst=$('taxType').value==='IGST';
     const hdr=[];
     if(pics)hdr.push(cell('Product',{w:CW[0],b:1,sh:NAVY,c:'FFFFFF',a:AlignmentType.CENTER}));
-    hdr.push(cell('Description',{w:CW[D0],b:1,sh:NAVY,c:'FFFFFF'}),
-      cell('Qty',{w:CW[D0+1],b:1,sh:NAVY,c:'FFFFFF',a:AlignmentType.RIGHT}),
-      cell('Rate (INR)',{w:CW[D0+2],b:1,sh:NAVY,c:'FFFFFF',a:AlignmentType.RIGHT}),
-      cell('Amount (INR)',{w:CW[D0+3],b:1,sh:NAVY,c:'FFFFFF',a:AlignmentType.RIGHT}));
+    hdr.push(cell('Description',{w:CW[D0],b:1,sh:NAVY,c:'FFFFFF',a:AlignmentType.CENTER}),
+      cell('Qty',{w:CW[D0+1],b:1,sh:NAVY,c:'FFFFFF',a:AlignmentType.CENTER}),
+      cell('Rate (INR)',{w:CW[D0+2],b:1,sh:NAVY,c:'FFFFFF',a:AlignmentType.CENTER}));
+    if(dc)hdr.push(cell('Discount (INR)',{w:CW[D0+3],b:1,sh:NAVY,c:'FFFFFF',a:AlignmentType.CENTER}));
+    hdr.push(cell('Amount (INR)',{w:CW[AI],b:1,sh:NAVY,c:'FFFFFF',a:AlignmentType.CENTER}));
     const rows=[new TableRow({tableHeader:true,children:hdr})];
 
     const perItemTax = x.rate===null; // consumables: each row has its own GST%/discount
@@ -1416,8 +1437,10 @@ async function makeDocx(){
       const cs=[];
       if(pics)cs.push(picCell(i.img,CW[0]));
       cs.push(cell(L.length?L:[''],{w:CW[D0]}),cell(i.q,{w:CW[D0+1],a:AlignmentType.RIGHT}),
-        cell(i.r?IN(i.r):'FOC',{w:CW[D0+2],a:AlignmentType.RIGHT}),
-        cell(i.r?IN(i.q*i.r):'FOC',{w:CW[D0+3],a:AlignmentType.RIGHT}));
+        cell(i.r?IN(i.r):'FOC',{w:CW[D0+2],a:AlignmentType.RIGHT}));
+      if(dc){const dv=(i.r&&parseFloat(i.disc))?Math.min(parseFloat(i.disc),i.q*i.r):0;
+        cs.push(cell(dv?IN(dv):'-',{w:CW[D0+3],a:AlignmentType.RIGHT}));}
+      cs.push(cell(i.r?IN(dc?(i.q*i.r-Math.min(parseFloat(i.disc)||0,i.q*i.r)):i.q*i.r):'FOC',{w:CW[AI],a:AlignmentType.RIGHT}));
       rows.push(new TableRow({children:cs}));
     });
 
@@ -1425,12 +1448,13 @@ async function makeDocx(){
       const sh=o.sh||CREAM;
       const cs=[];
       if(pics)cs.push(cell('',{w:CW[0],sh}));
-      cs.push(cell(lbl,{w:CW[D0],b:1,sh,c:o.c}),cell('',{w:CW[D0+1],sh}),cell('',{w:CW[D0+2],sh}),
-        cell(val,{w:CW[D0+3],b:1,sh,c:o.c,a:AlignmentType.RIGHT}));
+      cs.push(cell(lbl,{w:CW[D0],b:1,sh,c:o.c}),cell('',{w:CW[D0+1],sh}),cell('',{w:CW[D0+2],sh}));
+      if(dc)cs.push(cell('',{w:CW[D0+3],sh}));
+      cs.push(cell(val,{w:CW[AI],b:1,sh,c:o.c,a:AlignmentType.RIGHT}));
       return new TableRow({children:cs});
     };
-    rows.push(sum('Total','\u20B9 '+IN(x.sub)));
-    if(x.dis){rows.push(sum('Less: Discount'+(perItemTax?' (all items)':''),'\u2212 \u20B9 '+IN(x.dis)));rows.push(sum('Sub Total','\u20B9 '+IN(x.net)));}
+    rows.push(sum('Total','\u20B9 '+IN(dc?x.net:x.sub)));
+    if(x.dis&&!dc){rows.push(sum('Less: Discount'+(perItemTax?' (all items)':''),'\u2212 \u20B9 '+IN(x.dis)));rows.push(sum('Sub Total','\u20B9 '+IN(x.net)));}
     if(perItemTax){
       if(igst)rows.push(sum('GST (per item, blended)','\u20B9 '+IN(x.tax)));
       else{rows.push(sum('CGST (blended)','\u20B9 '+IN(x.tax/2)));rows.push(sum('SGST (blended)','\u20B9 '+IN(x.tax/2)));}
