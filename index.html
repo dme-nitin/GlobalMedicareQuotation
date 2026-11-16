@@ -140,9 +140,18 @@ button{cursor:pointer;font:inherit;font-weight:600;border-radius:6px;border:none
 .tab.on .dot{background:#E05B2B}
 
 /* panes */
-#editPane,#pvPane{display:none}
+#editPane,#pvPane,#allPane{display:none}
 body.mode-edit #editPane{display:block}
 body.mode-pv  #pvPane{display:block}
+body.mode-all #allPane{display:block}
+.aqwrap{max-width:1100px;margin:18px auto 60px;padding:0 16px}
+.aqbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.aqbar input{flex:1;min-width:200px;padding:9px 11px;border:1px solid #CCC;border-radius:7px;font-size:13px}
+.aqt{width:100%;border-collapse:collapse;background:#fff;font-size:12.5px}
+.aqt th{background:var(--navy);color:#fff;padding:9px 10px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.aqt td{border:1px solid #DDD;padding:8px 10px;vertical-align:top}
+.aqt td.c{text-align:center;white-space:nowrap}
+.aqt a{color:var(--accent-dk);font-weight:700}
 
 .sheetwrap{max-width:840px;margin:20px auto 60px;padding:0 16px}
 .sheet{background:transparent;border:none;border-radius:0}
@@ -182,6 +191,7 @@ body.mode-pv  #pvPane{display:block}
 <div class="tabs">
   <button class="tab on" id="tabE" onclick="go('edit')">&#9999;&#65039; Edit Quotation</button>
   <button class="tab"    id="tabP" onclick="go('pv')">&#128065; Preview <span class="dot" id="wc" style="display:none">0</span></button>
+  <button class="tab" id="tabA" onclick="go('all')">&#128203; All Quotations</button>
   <button class="tab" style="margin-left:auto;background:rgba(255,255,255,.14)" onclick="loadSavedQuotation()">&#128194; Load Saved Quotation</button>
   <button class="tab" style="background:rgba(255,255,255,.14)" onclick="clearForm()">&#128465;&#65039; Clear Form</button>
 </div>
@@ -200,6 +210,20 @@ body.mode-pv  #pvPane{display:block}
   </div>
   <div class="check" id="checklist"></div>
   <div class="sheetwrap"><div class="sheet" id="sheet"></div></div>
+</div>
+
+<!-- ================= ALL QUOTATIONS PANE ================= -->
+<div id="allPane">
+  <div class="aqwrap">
+    <div class="aqbar">
+      <input type="text" id="aqSearch" placeholder="Search by customer, product or quotation no..." oninput="aqRender_()">
+      <button class="btn2" onclick="loadAllQuotations()">&#8635; Refresh</button>
+      <span id="aqStatus" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div style="overflow-x:auto"><table class="aqt"><thead><tr>
+      <th>Customer Name</th><th>Product Details</th><th>Quantity</th><th>Total Amount</th><th>Quotation</th>
+    </tr></thead><tbody id="aqBody"></tbody></table></div>
+  </div>
 </div>
 
 <!-- ================= EDIT PANE ================= -->
@@ -1261,11 +1285,59 @@ function render(){
 
 /* ---------- Tab switching ---------- */
 function go(m){
-  render();
+  if(m!=='all')render();
   document.body.className='mode-'+m;
   $('tabE').classList.toggle('on',m==='edit');
   $('tabP').classList.toggle('on',m==='pv');
+  $('tabA').classList.toggle('on',m==='all');
+  if(m==='all')loadAllQuotations();
   window.scrollTo(0,0);
+}
+
+/* ---------- All Quotations (reads the Google Sheet via the backend) ---------- */
+let aqRows_=[];
+async function loadAllQuotations(){
+  const st=$('aqStatus');
+  if(!WEBAPP_URL||WEBAPP_URL.indexOf('PASTE_YOUR')===0){st.textContent='Backend URL (WEBAPP_URL) not configured.';return;}
+  st.textContent='Loading...';
+  try{
+    const res=await fetch(WEBAPP_URL+(WEBAPP_URL.indexOf('?')>-1?'&':'?')+'action=list&t='+Date.now());
+    const j=await res.json();
+    if(j.status!=='ok')throw new Error(j.message||'Unknown error');
+    aqRows_=j.rows||[];
+    st.textContent=aqRows_.length+' quotation(s)';
+    aqRender_();
+  }catch(err){
+    st.textContent='Could not load: '+err.message+' (Code.gs must be redeployed as a New version)';
+  }
+}
+function aqRender_(){
+  const q=($('aqSearch').value||'').toLowerCase();
+  const body=$('aqBody'); body.innerHTML='';
+  const rows=aqRows_.filter(r=>!q||[r.id,r.customer,r.company,r.products].join(' ').toLowerCase().indexOf(q)>-1);
+  if(!rows.length){
+    const tr=document.createElement('tr'),td=document.createElement('td');
+    td.colSpan=5;td.className='c';td.textContent=aqRows_.length?'No matching quotations.':'No quotations found.';
+    tr.appendChild(td);body.appendChild(tr);return;
+  }
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    const c1=document.createElement('td');
+    const b=document.createElement('b');b.textContent=r.customer||'-';c1.appendChild(b);
+    const sm=document.createElement('div');sm.style.cssText='font-size:10.5px;color:#777;margin-top:2px';
+    sm.textContent=(r.id||'')+(r.date?' \u00B7 '+r.date:'');c1.appendChild(sm);
+    const c2=document.createElement('td');c2.style.whiteSpace='pre-line';c2.textContent=r.products||'';
+    const c3=document.createElement('td');c3.className='c';c3.textContent=r.qty;
+    const c4=document.createElement('td');c4.className='c';
+    const tv=parseFloat(String(r.total).replace(/[^0-9.\-]/g,''));
+    c4.textContent=isNaN(tv)?(r.total||''):'\u20B9 '+IN(tv);
+    const c5=document.createElement('td');c5.className='c';
+    if(/^https?:\/\//.test(r.pdf||'')){
+      const a=document.createElement('a');a.href=r.pdf;a.target='_blank';a.rel='noopener';a.textContent='Open PDF';c5.appendChild(a);
+    }else c5.textContent='-';
+    [c1,c2,c3,c4,c5].forEach(c=>tr.appendChild(c));
+    body.appendChild(tr);
+  });
 }
 
 /* ---------- Pre-send checklist ---------- */
