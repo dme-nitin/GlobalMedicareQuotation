@@ -149,6 +149,8 @@ body.mode-all #allPane{display:block}
 .aqbar input{flex:1;min-width:200px;padding:9px 11px;border:1px solid #CCC;border-radius:7px;font-size:13px}
 .aqt{width:100%;border-collapse:collapse;background:#fff;font-size:12.5px}
 .aqt th{background:var(--navy);color:#fff;padding:9px 10px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.aqt tr.aqf th{background:#E9EEF5;padding:5px 6px}
+.aqt .aqfi{width:100%;box-sizing:border-box;padding:5px 6px;border:1px solid #BBB;border-radius:5px;font-size:11.5px;text-transform:none;letter-spacing:0;font-weight:400}
 .aqt td{border:1px solid #DDD;padding:8px 10px;vertical-align:top}
 .aqt td.c{text-align:center;white-space:nowrap}
 .aqt a{color:var(--accent-dk);font-weight:700}
@@ -216,12 +218,19 @@ body.mode-all #allPane{display:block}
 <div id="allPane">
   <div class="aqwrap">
     <div class="aqbar">
-      <input type="text" id="aqSearch" placeholder="Search by customer, product or quotation no..." oninput="aqRender_()">
       <button class="btn2" onclick="loadAllQuotations()">&#8635; Refresh</button>
       <span id="aqStatus" style="font-size:12px;color:var(--muted)"></span>
     </div>
     <div style="overflow-x:auto"><table class="aqt"><thead><tr>
       <th>Date &amp; Time</th><th>Quotation ID</th><th>Customer Name</th><th>Product Details</th><th>Quantity</th><th>Total Amount</th><th>Quotation</th>
+    </tr><tr class="aqf">
+      <th><input class="aqfi" data-k="date" placeholder="Filter..." oninput="aqRender_()"></th>
+      <th><input class="aqfi" data-k="id" placeholder="Filter..." oninput="aqRender_()"></th>
+      <th><input class="aqfi" data-k="customer" placeholder="Filter..." oninput="aqRender_()"></th>
+      <th><input class="aqfi" data-k="products" placeholder="Filter..." oninput="aqRender_()"></th>
+      <th><input class="aqfi" data-k="qty" placeholder="Filter..." oninput="aqRender_()"></th>
+      <th><input class="aqfi" data-k="total" placeholder="Filter..." oninput="aqRender_()"></th>
+      <th><input class="aqfi" data-k="pdf" placeholder="Has link? y/n" oninput="aqRender_()"></th>
     </tr></thead><tbody id="aqBody"></tbody></table></div>
   </div>
 </div>
@@ -1312,9 +1321,16 @@ async function loadAllQuotations(){
   }
 }
 function aqRender_(){
-  const q=($('aqSearch').value||'').toLowerCase();
+  const fl=[].slice.call(document.querySelectorAll('.aqfi')).map(i=>[i.getAttribute('data-k'),(i.value||'').trim().toLowerCase()]).filter(x=>x[1]);
   const body=$('aqBody'); body.innerHTML='';
-  const rows=aqRows_.filter(r=>!q||[r.id,r.customer,r.company,r.products].join(' ').toLowerCase().indexOf(q)>-1);
+  const rows=aqRows_.filter(r=>fl.every(f=>{
+    const k=f[0],v=f[1];
+    if(k==='pdf'){const has=/^https?:\/\//.test(r.pdf||'');return v.charAt(0)==='n'?!has:has;}
+    let hay=String(r[k]==null?'':r[k]).toLowerCase();
+    if(k==='customer')hay+=' '+String(r.company||'').toLowerCase();
+    if(k==='total'){const t=parseFloat(String(r.total).replace(/[^0-9.\-]/g,''));if(!isNaN(t))hay+=' '+IN(t);}
+    return hay.indexOf(v.replace(/,/g,''))>-1||hay.indexOf(v)>-1;
+  }));
   if(!rows.length){
     const tr=document.createElement('tr'),td=document.createElement('td');
     td.colSpan=7;td.className='c';td.textContent=aqRows_.length?'No matching quotations.':'No quotations found.';
