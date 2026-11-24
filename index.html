@@ -140,10 +140,12 @@ button{cursor:pointer;font:inherit;font-weight:600;border-radius:6px;border:none
 .tab.on .dot{background:#E05B2B}
 
 /* panes */
-#editPane,#pvPane,#allPane{display:none}
+#editPane,#pvPane,#allPane,#otPane{display:none}
 body.mode-edit #editPane{display:block}
 body.mode-pv  #pvPane{display:block}
 body.mode-all #allPane{display:block}
+body.mode-ot #otPane{display:block}
+#otFrame{width:100%;border:0;display:block;background:#F3F5F8}
 .aqwrap{max-width:1100px;margin:18px auto 60px;padding:0 16px}
 .aqbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 .aqbar input{flex:1;min-width:200px;padding:9px 11px;border:1px solid #CCC;border-radius:7px;font-size:13px}
@@ -194,6 +196,8 @@ body.mode-all #allPane{display:block}
   <button class="tab on" id="tabE" onclick="go('edit')">&#9999;&#65039; Edit Quotation</button>
   <button class="tab"    id="tabP" onclick="go('pv')">&#128065; Preview <span class="dot" id="wc" style="display:none">0</span></button>
   <button class="tab" id="tabA" onclick="go('all')">&#128203; All Quotations</button>
+  <button class="tab" id="tabOC" onclick="go('otc')">OT Calculator</button>
+  <button class="tab" id="tabOQ" onclick="go('otq')">OT Quotation</button>
   <button class="tab" style="margin-left:auto;background:rgba(255,255,255,.14)" onclick="loadSavedQuotation()">&#128194; Load Saved Quotation</button>
   <button class="tab" style="background:rgba(255,255,255,.14)" onclick="clearForm()">&#128465;&#65039; Clear Form</button>
 </div>
@@ -213,6 +217,9 @@ body.mode-all #allPane{display:block}
   <div class="check" id="checklist"></div>
   <div class="sheetwrap"><div class="sheet" id="sheet"></div></div>
 </div>
+
+<!-- ================= OT CALCULATOR / OT QUOTATION PANE (embedded page) ================= -->
+<div id="otPane"><iframe id="otFrame" title="OT Calculator and Quotation"></iframe></div>
 
 <!-- ================= ALL QUOTATIONS PANE ================= -->
 <div id="allPane">
@@ -1293,13 +1300,39 @@ function render(){
 }
 
 /* ---------- Tab switching ---------- */
-function go(m){
-  if(m!=='all')render();
-  document.body.className='mode-'+m;
+function setTabs_(m){
   $('tabE').classList.toggle('on',m==='edit');
   $('tabP').classList.toggle('on',m==='pv');
   $('tabA').classList.toggle('on',m==='all');
+  $('tabOC').classList.toggle('on',m==='otc');
+  $('tabOQ').classList.toggle('on',m==='otq');
+}
+function sizeOtFrame_(){
+  var f=$('otFrame'),top=f.getBoundingClientRect().top+window.pageYOffset;
+  f.style.height=Math.max(window.innerHeight-top,400)+'px';
+}
+function openOt_(m){
+  var f=$('otFrame');
+  if(!f.getAttribute('data-ready')){
+    f.setAttribute('data-ready','1');
+    f.srcdoc=$('otSrc').textContent.split('<\\/script>').join('<'+'/script>');
+    f.onload=function(){try{f.contentWindow.go(m==='otq'?'q':'c');}catch(e){}};
+  }else{
+    try{f.contentWindow.go(m==='otq'?'q':'c');}catch(e){}
+  }
+}
+window.addEventListener('message',function(ev){
+  var d=ev.data;if(!d||!d.otMode)return;
+  if(document.body.className.indexOf('mode-ot')>-1)setTabs_(d.otMode==='q'?'otq':'otc');
+});
+window.addEventListener('resize',function(){if(document.body.className.indexOf('mode-ot')>-1)sizeOtFrame_();});
+function go(m){
+  var isOt=(m==='otc'||m==='otq');
+  if(m!=='all'&&!isOt)render();
+  document.body.className=isOt?'mode-ot':'mode-'+m;
+  setTabs_(m);
   if(m==='all')loadAllQuotations();
+  if(isOt){sizeOtFrame_();openOt_(m);}
   window.scrollTo(0,0);
 }
 
@@ -1835,6 +1868,534 @@ async function renderPreviewToPdfBase64_(){
 /* ===== START THE APP =====
    Runs last, so every const above is fully initialized. */
 boot();
+
+/* Used by the embedded OT Quotation page for the letterhead logo, company details and seal. */
+function GM_BRAND(){return {logo:LOGO_IMG,sig:SIG,co:CO};}
+</script>
+<script type="text/plain" id="otSrc"><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OT Quotation Calculator</title>
+<style>
+/* Layout: sticky total bar + two tabs (Calculator / Quotation). Palette: navy ink, teal accent, warm paper. */
+:root{
+  --bg:#F3F5F8; --card:#FFFFFF; --ink:#16233B; --muted:#5F6B80; --line:#D8DEE8;
+  --accent:#0E7C86; --accent-ink:#FFFFFF; --navy:#16305A; --warn:#B45309; --warnbg:#FEF3C7; --field:#FFFFFF;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1625; --card:#18223A; --ink:#E7ECF5; --muted:#9AA6BC; --line:#2B3856;
+    --accent:#35B3BD; --accent-ink:#06222A; --navy:#24437A; --warn:#F5B454; --warnbg:#3A2C12; --field:#111A2E; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1625; --card:#18223A; --ink:#E7ECF5; --muted:#9AA6BC; --line:#2B3856;
+  --accent:#35B3BD; --accent-ink:#06222A; --navy:#24437A; --warn:#F5B454; --warnbg:#3A2C12; --field:#111A2E; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",Roboto,Arial,sans-serif}
+header{background:var(--navy);color:#fff;padding:14px 16px}
+header h1{margin:0;font-size:19px;letter-spacing:.2px}
+header .sub{font-size:12px;opacity:.8;margin-top:2px}
+.tabs{background:var(--navy);display:flex;gap:6px;padding:0 16px}
+.tab{background:rgba(255,255,255,.14);color:#fff;border:0;padding:9px 18px;border-radius:8px 8px 0 0;font-weight:700;font-size:13px;cursor:pointer;opacity:.8}
+.tab.on{background:var(--bg);color:var(--ink);opacity:1}
+.tab:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.wrap{max-width:1000px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.6px;color:var(--accent)}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:3px;font-weight:600}
+input,select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--ink);font:inherit;min-width:0}
+input[type=checkbox]{width:auto}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.note{font-size:11.5px;color:var(--muted);margin-top:6px}
+.derived{font-size:12.5px;margin-top:8px;color:var(--ink)}
+.derived b{color:var(--accent)}
+.walls{display:grid;gap:6px;margin-top:6px}
+.wallrow{display:grid;grid-template-columns:1fr 1fr 70px 34px;gap:6px;align-items:end}
+button.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:7px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:13px}
+button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+button.x{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:6px;height:32px;cursor:pointer}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+table.items th{background:var(--navy);color:#fff;text-align:center;padding:8px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+table.items td{border-bottom:1px solid var(--line);padding:6px;vertical-align:middle}
+table.items td.sn{text-align:center;color:var(--muted);width:34px}
+table.items td.inc{text-align:center;width:34px}
+table.items td.name{min-width:230px}
+table.items td.name .nm{font-weight:600}
+table.items td.name select,table.items td.name input{margin-top:4px}
+table.items td.q{width:92px} table.items td.r{width:118px} table.items td.a{width:120px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+tr.off td{opacity:.45}
+.flag{display:inline-block;background:var(--warnbg);color:var(--warn);font-size:10.5px;font-weight:700;border-radius:99px;padding:1px 7px;margin-left:6px}
+.tot{position:sticky;bottom:0;background:var(--card);border-top:2px solid var(--accent);padding:10px 16px;display:flex;gap:18px;flex-wrap:wrap;align-items:center;justify-content:space-between;z-index:5}
+.tot .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.tot .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.tot .gt .v{color:var(--accent);font-size:21px}
+.tot .gst{display:flex;align-items:center;gap:6px}
+.tot .gst input{width:64px}
+#quote{display:none}
+body.mode-q #calc{display:none} body.mode-q #quote{display:block} body.mode-q .tot{display:none}
+.paper{background:#fff;color:#1a1a1a;max-width:794px;min-height:1050px;margin:0 auto;padding:20mm 18mm;border:1px solid #ccc;font-family:Georgia,"Times New Roman",serif;font-size:12px;line-height:1.55;display:flex;flex-direction:column;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+.paper .ph{display:flex;justify-content:flex-end;align-items:flex-start;border-bottom:3px solid #16305A;padding-bottom:9px;margin-bottom:6px}
+.paper .ph img{height:28px;display:block}
+.paper .acc{height:3px;background:#0E7C86;margin-bottom:14px}
+.paper .title{text-align:center;font-family:"Segoe UI",Arial,sans-serif;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#16305A;margin:10px 0 4px}
+.paper .meta{display:flex;justify-content:space-between;font-family:"Segoe UI",Arial,sans-serif;font-size:11px;color:#555;margin-bottom:14px}
+.paper h3{margin:16px 0 6px;color:#16305A;font-family:"Segoe UI",Arial,sans-serif;font-size:13.5px}
+.paper table.qt{width:100%;border-collapse:collapse;margin-top:6px;font-family:"Segoe UI",Arial,sans-serif}
+.paper table.qt th{background:#16305A;color:#fff;padding:7px 6px;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;text-align:center}
+.paper table.qt td{border:1px solid #DDD;padding:7px 8px;vertical-align:top;color:#111;font-size:12px}
+.paper table.qt td.c{text-align:center;white-space:nowrap}
+.paper table.qt tr.sum td{background:#F3F5F8;font-weight:600}
+.paper table.qt tr.gt td{background:#16305A;color:#fff;font-weight:700;font-size:13px}
+.paper .words{margin-top:8px;font-style:italic;font-size:11.5px}
+.paper .terms{font-family:"Segoe UI",Arial,sans-serif;font-size:11px;padding-left:20px;margin:0}
+.paper .terms li{margin-bottom:4px}
+.paper .sign{margin-top:22px;font-family:"Segoe UI",Arial,sans-serif;font-size:11.5px;page-break-inside:avoid}
+.paper .sign .sp{height:44px}
+.paper .stamp{margin:6px 0 2px}
+.paper .stamp img{width:112px;height:auto;display:block;mix-blend-mode:multiply}
+.paper .lhfoot{margin-top:auto;padding-top:9px;border-top:2px solid #16305A;font-family:"Segoe UI",Arial,sans-serif;font-size:10px;color:#555;line-height:1.6;text-align:center;page-break-inside:avoid}
+.paper .lhfoot b{color:#16305A;letter-spacing:.5px}
+.paper .fillgap{height:26px}
+.paper.s1,.paper.s1b{margin-bottom:14px}
+.paper table.qt td ol{margin:0;padding-left:18px}
+.pvtools{max-width:820px;margin:0 auto 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+@media (max-width:620px){.paper{padding:16px;min-height:0}.wallrow{grid-template-columns:1fr 1fr 60px 34px}}
+body.embedded header,body.embedded .tabs{display:none}
+body.embedded .wrap{padding-top:10px}
+@media print{
+  @page{size:A4;margin:10mm}
+  body{background:#fff}
+  header,.tabs,.pvtools,.tot,#calc{display:none!important}
+  #quote{display:block!important}
+  .wrap{padding:0;max-width:none}
+  .paper{border:0;padding:0;max-width:none;box-shadow:none;margin:0}
+  .paper.s1{min-height:0;margin-bottom:0}
+  .paper.s1b{min-height:0;page-break-before:always}
+  .paper.s2{min-height:272mm;page-break-before:always}
+  .paper table.qt tr{page-break-inside:avoid}
+}
+</style>
+</head>
+<body class="mode-c">
+<header>
+  <h1>Global Medicare &#8212; Modular OT Quotation Calculator</h1>
+  <div class="sub">Fill the form, check the rates, then open the Quotation tab.</div>
+</header>
+<div class="tabs">
+  <button class="tab on" id="tabC" onclick="go('c')">Calculator</button>
+  <button class="tab" id="tabQ" onclick="go('q')">Quotation</button>
+</div>
+
+<div id="calc"><div class="wrap">
+
+  <div class="card">
+    <h2>Customer</h2>
+    <div class="grid">
+      <div><label for="cust">Customer / Hospital</label><input id="cust" type="text" placeholder="Hospital name"></div>
+      <div><label for="city">City (for subject and terms)</label><input id="city" type="text" placeholder="e.g. Gorakhpur"></div>
+      <div><label for="attn">Kind Attn.</label><input id="attn" type="text" placeholder="e.g. Dr. Pankaj Kumar"></div>
+      <div><label for="qdate">Date</label><input id="qdate" type="date"></div>
+      <div><label for="qref">Quotation No.</label><input id="qref" type="text" placeholder="e.g. Global/OT/2627/152"></div>
+    </div>
+    <div style="margin-top:10px"><label for="loc">Address (shown under customer name)</label><textarea id="loc" rows="2" placeholder="Street, area, city - PIN" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--ink);font:inherit"></textarea></div>
+  </div>
+
+  <div class="card">
+    <h2>1 &middot; OT size (feet)</h2>
+    <div class="grid">
+      <div><label for="L">Length (ft)</label><input id="L" type="number" step="0.1" value="13" class="num"></div>
+      <div><label for="B">Breadth (ft)</label><input id="B" type="number" step="0.1" value="22" class="num"></div>
+      <div><label for="H">Height (ft)</label><input id="H" type="number" step="0.1" value="9.5" class="num"></div>
+    </div>
+    <div class="derived" id="dimOut"></div>
+  </div>
+
+  <div class="card">
+    <h2>2 &middot; Walls (feet)</h2>
+    <div class="note" style="margin:0 0 6px">Wall 1 is Length x Height and Wall 2 is Breadth x Height, two of each. Length and Breadth are 2 ft less than the OT size and Height is 1.5 ft less. You can still edit, add or remove rows.</div>
+    <div class="walls" id="walls"></div>
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost" onclick="addWall()">+ Add wall</button>
+      <button class="btn ghost" onclick="resetWalls()">Reset to OT size</button>
+    </div>
+    <div class="derived" id="wallOut"></div>
+  </div>
+
+  <div class="card">
+    <h2>3 &middot; Ceiling (feet)</h2>
+    <div class="grid">
+      <div><label for="CL">Length (ft)</label><input id="CL" type="number" step="0.1" class="num"></div>
+      <div><label for="CB">Breadth (ft)</label><input id="CB" type="number" step="0.1" class="num"></div>
+    </div>
+    <div class="derived" id="ceilOut"></div>
+    <div class="note">Length and Breadth are each 2 ft less than the OT size. Edit to override.</div>
+  </div>
+
+  <div class="card">
+    <h2>Items 4 to 34</h2>
+    <div class="note" style="margin:0 0 8px">Untick a line to leave it out of the quotation. Rates are pre-filled and can be changed on any line. Lines marked <span class="flag">enter rate</span> need a rate from you.</div>
+    <div class="tw"><table class="items" id="itemsTbl">
+      <thead><tr><th>#</th><th></th><th>Item</th><th>Qty</th><th>Rate (Rs.)</th><th>Amount (Rs.)</th></tr></thead>
+      <tbody id="itemsBody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card" id="sumCard">
+    <h2>Cost, margin and quotation value</h2>
+    <table class="items" style="max-width:560px"><tbody>
+      <tr><td>Total cost (all ticked items above)</td><td class="a" id="sCost">0</td></tr>
+      <tr><td>Our margin
+        <div style="display:flex;gap:6px;margin-top:4px"><input id="mgn" type="number" step="any" value="0" class="num" aria-label="Margin value" style="max-width:120px">
+        <select id="mgnType" aria-label="Margin type" style="max-width:150px"><option value="pct">% of cost</option><option value="amt">Rs. fixed amount</option></select></div></td>
+        <td class="a" id="sMgn">0</td></tr>
+      <tr style="background:var(--bg)"><td><b>Quotation value per OT (rate)</b></td><td class="a" id="sQv">0</td></tr>
+      <tr><td>Number of OTs <input id="nOT" type="number" step="1" min="1" value="1" class="num" style="width:70px;display:inline-block" aria-label="Number of OTs"></td><td class="a" id="sTot">0</td></tr>
+      <tr><td>GST <input id="gstPct" type="number" step="0.01" value="18" class="num" style="width:70px;display:inline-block" aria-label="GST percent"> %</td><td class="a" id="sGst">0</td></tr>
+      <tr style="background:var(--bg)"><td><b>Grand total</b></td><td class="a" id="sGt" style="color:var(--accent);font-size:16px">0</td></tr>
+    </tbody></table>
+    <div class="note">The customer sees only the rate per OT, the number of OTs and the total. Cost and margin are never printed. The item rows above are for one OT.</div>
+  </div>
+
+  <div class="card">
+    <h2>Scope of work (page 2 of the quotation)</h2>
+    <div class="note" style="margin:0 0 6px">Filled automatically from the items ticked above. One row per line as: Description | Make | Quantity. Use // for a line break inside a description. If you edit it, it stops updating until you press Regenerate.</div>
+    <textarea id="scopeTa" rows="12" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--ink);font:12px/1.4 Consolas,monospace"></textarea>
+    <div style="margin-top:8px"><button class="btn ghost" onclick="scopeEdited=false;genScopeToTa()">Regenerate from calculator</button></div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px;color:var(--ink)"><input type="checkbox" id="sigOn" checked> Apply Global Medicare seal / signature on the quotation</label>
+  </div>
+
+  <div class="card">
+    <h2>Terms for the quotation</h2>
+    <label for="terms">One term per line (the Purchase Order line is added automatically as term 1). {CUSTOMER} and {CITY} are filled from the Customer box. Use **text** for bold.</label>
+    <textarea id="terms" rows="12" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--ink);font:inherit"></textarea>
+  </div>
+</div>
+<div style="height:70px"></div></div>
+
+<div id="quote"><div class="wrap">
+  <div class="pvtools">
+    <button class="btn ghost" onclick="go('c')">&larr; Back to calculator</button>
+    <button class="btn" onclick="printQ()">Print / Save as PDF</button>
+    <span class="note" id="printNote"></span>
+  </div>
+  <div id="paper"></div>
+</div></div>
+
+<div class="tot" id="totbar">
+  <div><div class="k">Total cost</div><div class="v" id="tCost">0</div></div>
+  <div><div class="k">Quotation value</div><div class="v" id="tSub">0</div></div>
+  <div class="gt"><div class="k">Grand total incl. GST</div><div class="v" id="tGt">0</div></div>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+var $=function(i){return document.getElementById(i);};
+var SQFT_SQM=10.7639;
+function IN(n){n=Math.round(n||0);var neg=n<0;n=Math.abs(n);var s=String(n);if(s.length>3){var l=s.slice(-3),r=s.slice(0,-3),o=[];while(r.length>2){o.unshift(r.slice(-2));r=r.slice(0,-2);}if(r)o.unshift(r);s=o.join(',')+','+l;}return (neg?'-':'')+s;}
+function esc(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function num(id){return parseFloat($(id).value)||0;}
+function words(n){
+  n=Math.round(n);if(!n)return 'Zero';
+  var a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  var b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function two(x){return x<20?a[x]:b[Math.floor(x/10)]+(x%10?' '+a[x%10]:'');}
+  function three(x){return (x>99?a[Math.floor(x/100)]+' Hundred'+(x%100?' ':''):'')+(x%100?two(x%100):'');}
+  var out=[],cr=Math.floor(n/10000000);n%=10000000;var lk=Math.floor(n/100000);n%=100000;var th=Math.floor(n/1000);n%=1000;
+  if(cr)out.push(three(cr)+' Crore');if(lk)out.push(two(lk)+' Lakh');if(th)out.push(two(th)+' Thousand');if(n)out.push(three(n));
+  return out.join(' ');
+}
+
+/* ---------- item definitions ----------
+   t:'fixed'  qty fixed at 1 unless q given; rate editable
+   opts: dropdown that sets the rate (rate:null = rate must be typed in)
+   kg:true    qty is kilograms and the rate is per kg
+   auto:'paint'|'floor'  qty is filled from the dimensions above */
+var ITEMS=[
+ {n:4,name:'Anti-bacterial paint',unit:'sq m',q:0,rate:280,auto:'paint'},
+ {n:5,name:'OT door',unit:'nos',q:1,rate:100000,sizeNote:'1500 x 2100 mm',opts:[{l:'Automatic',rate:100000},{l:'Manual',rate:100000}],opts2:['Hikom','Metaflex'],chk:'Automatic and Manual are both at Rs. 100000 in the brief. Confirm the Manual rate and any difference between Hikom and Metaflex.'},
+ {n:6,name:'Vinyl flooring',unit:'sq m',q:0,rate:3000,auto:'floor'},
+ {n:7,name:'Pressure relief damper',unit:'nos',q:1,rate:7500},
+ {n:8,name:'X-ray panel',unit:'nos',q:1,rate:16000,opts:[{l:'2 plate',rate:16000},{l:'3 plate',rate:16000}],chk:'Both options are at Rs. 16000. Change the rate for 3 plate if it differs.'},
+ {n:9,name:'Writing board',unit:'nos',q:1,rate:5000},
+ {n:10,name:'Perforated plenum ceiling',unit:'nos',q:1,rate:0,opts:[{l:'4 x 4 ft',rate:null,area:16},{l:'6 x 6 ft',rate:null,area:36},{l:'6 x 8 ft',rate:null,area:48},{l:'8 x 8 ft',rate:null,area:64}],manual:true},
+ {n:11,name:'Surgeon control panel',unit:'nos',q:1,rate:75000,opts:[{l:'Analog',rate:75000},{l:'Touch',rate:75000}]},
+ {n:12,name:'Return air grill',unit:'nos',q:4,rate:4000,qtyOpts:[4,8]},
+ {n:13,name:'Surgeon pendant',unit:'nos',q:1,rate:85000,opts:[{l:'Indian',rate:85000},{l:'Imported',rate:null}]},
+ {n:14,name:'Anaesthesia pendant',unit:'nos',q:1,rate:85000,opts:[{l:'Indian',rate:85000},{l:'Imported',rate:null}]},
+ {n:15,name:'Storage unit',unit:'nos',q:1,rate:45000},
+ {n:16,name:'OT motorised window',unit:'nos',q:1,rate:25000},
+ {n:17,name:'Peripheral lights',unit:'nos',q:4,rate:7000,qtyFree:true,opts:[{l:'2 x 1',rate:7000},{l:'2 x 2',rate:7000}],chk:'Both sizes are at Rs. 7000 per light. Change the rate for 2 x 2 if it differs.'},
+ {n:18,name:'Pass box',unit:'nos',q:1,rate:32000},
+ {n:19,name:'Ducting inside OT',unit:'kg',q:1000,rate:160,kg:true,opts:[{l:'GI',rate:160},{l:'Aluminium',rate:160}],chk:'Brief gives Rs. 160000 for ducting. Set to 1000 kg x Rs. 160 per kg. Change kg and rate to suit.'},
+ {n:20,name:'Electrical wiring inside OT',unit:'lumpsum',q:1,rate:120000},
+ {n:21,name:'Distribution box',unit:'lumpsum',q:1,rate:20000},
+ {n:22,name:'MGPS inside OT',unit:'lumpsum',q:1,rate:90000},
+ {n:23,name:'AHU',unit:'lumpsum',q:1,rate:275000},
+ {n:24,name:'A/C outdoor unit 8.5 TR',unit:'nos',q:1,rate:190000},
+ {n:25,name:'Ducting to AHU',unit:'kg',q:500,rate:180,kg:true,opts:[{l:'GI',rate:180},{l:'Aluminium',rate:180}],chk:'Brief gives Rs. 90000. Set to 500 kg x Rs. 180 per kg. Change kg and rate to suit.'},
+ {n:26,name:'Labour per OT',unit:'lumpsum',q:1,rate:125000},
+ {n:27,name:'Electrical labour',unit:'lumpsum',q:1,rate:0},
+ {n:28,name:'Silicon',unit:'lumpsum',q:1,rate:10000},
+ {n:29,name:'Ducting accessories',unit:'lumpsum',q:1,rate:40000},
+ {n:30,name:'Freight',unit:'lumpsum',q:1,rate:15000},
+ {n:31,name:'Unloading',unit:'lumpsum',q:1,rate:15000},
+ {n:32,name:'Certificates',unit:'lumpsum',q:1,rate:0},
+ {n:33,name:'Stay of staff',unit:'lumpsum',q:1,rate:0},
+ {n:34,name:'Warranty',unit:'lumpsum',q:1,rate:0}
+];
+var DEF_TERMS=[
+ 'Payment Terms: 100% Advance Payment along with Purchase Order.',
+ 'Installation : 8 to 10 weeks from the date of order confirmation and advance payment.',
+ 'Rates are for {CITY} site only.',
+ 'Quotation is valid for 15 days from the date of quotation.',
+ 'Exclusions : Any civil work within or outside OT. Any other work outside OT. All work to be done as per scope of work within OT and attached sheet.',
+ 'Warranty for a period of 1 year. **(Airconditioner Outdoor Unit does not come with warranty).** Thereafter AMC of 7% or CMC of 9% to be escalated @ 10% per annum for the next 5 years. Warranty excludes damage due to water seepage & or force applied to ceiling, walls, any other installed item. Hepa filters getting choked due to non maintenance. Mishandling & voltage fluctuation causing damage to other installations.',
+ 'Storage for products/raw material to be provided by {CUSTOMER} at {CITY} site.',
+ 'All Disputes if any arising out of this transaction will be subject to Delhi jurisdiction only.'
+];
+var ABOUT=[
+ "Global Medicare (A Unit of Global Appliances Pvt. Ltd.) has been a trusted partner to India's gastroenterology, hepatology and hospital-infrastructure community since 2009. We have served over 500 hospitals across 20+ States through a dedicated pan-India field force of Regional Sales Managers and trained service engineers.",
+ "Our portfolio spans FibroScan, Capsule Endoscopy, High-Resolution Manometry, Urea and Hydrogen Breath Testing, Body Composition Analysis, OT Pendants, Cholangioscopy and Modular Operation Theatres."
+];
+
+/* ---------- state ---------- */
+var walls=[]; var st={}; var overrides={}; // st[n]={on,opt,q,rate,note}; overrides: paint/floor qty typed by user
+function initState(){
+  ITEMS.forEach(function(it){
+    st[it.n]={on:true,opt:it.opts?0:-1,opt2:it.opts2?0:-1,q:it.q,rate:it.opts&&it.opts[0].rate!=null?it.opts[0].rate:it.rate,note:it.sizeNote||''};
+  });
+}
+function wl(){return Math.max(num('L')-2,0);} function wb(){return Math.max(num('B')-2,0);} function wh(){return Math.max(num('H')-1.5,0);}
+var wallsEdited=false,ceilEdited=false;
+function resetWalls(){wallsEdited=false;walls=[{w:wl(),h:wh(),n:2},{w:wb(),h:wh(),n:2}];buildWalls();recalc();}
+function addWall(){wallsEdited=true;walls.push({w:0,h:wh(),n:1});buildWalls();recalc();}
+function buildWalls(){
+  var c=$('walls');c.innerHTML='';
+  walls.forEach(function(w,i){
+    var d=document.createElement('div');d.className='wallrow';
+    d.innerHTML='<div><label>Width (ft)</label><input type="number" step="0.1" class="num" value="'+w.w+'"></div>'+
+      '<div><label>Height (ft)</label><input type="number" step="0.1" class="num" value="'+w.h+'"></div>'+
+      '<div><label>Nos.</label><input type="number" step="1" min="1" class="num" value="'+w.n+'"></div>'+
+      '<button class="x" title="Remove this wall" aria-label="Remove wall">&times;</button>';
+    var ins=d.querySelectorAll('input');
+    ins[0].oninput=function(){wallsEdited=true;w.w=parseFloat(this.value)||0;recalc();};
+    ins[1].oninput=function(){wallsEdited=true;w.h=parseFloat(this.value)||0;recalc();};
+    ins[2].oninput=function(){wallsEdited=true;w.n=parseFloat(this.value)||0;recalc();};
+    d.querySelector('button').onclick=function(){wallsEdited=true;walls.splice(i,1);buildWalls();recalc();};
+    c.appendChild(d);
+  });
+}
+
+/* ---------- item table ---------- */
+function buildItems(){
+  var tb=$('itemsBody');tb.innerHTML='';
+  ITEMS.forEach(function(it){
+    var s=st[it.n];var tr=document.createElement('tr');tr.id='row'+it.n;
+    var nameHtml='<div class="nm">'+esc(it.name)+'<span class="flag" id="fl'+it.n+'" style="display:none">enter rate</span></div>';
+    if(it.opts){nameHtml+='<select aria-label="'+esc(it.name)+' type">'+it.opts.map(function(o,i){return '<option value="'+i+'"'+(i===s.opt?' selected':'')+'>'+esc(o.l)+'</option>';}).join('')+'</select>';}
+    if(it.opts2){nameHtml+='<select class="sel2" aria-label="'+esc(it.name)+' make">'+it.opts2.map(function(o,i){return '<option value="'+i+'"'+(i===s.opt2?' selected':'')+'>'+esc(o)+'</option>';}).join('')+'</select>';}
+    if(it.sizeNote!==undefined){nameHtml+='<input type="text" class="note-in" aria-label="Size" placeholder="Size" value="'+esc(s.note)+'">';}
+    if(it.chk){nameHtml+='<div class="note">'+esc(it.chk)+'</div>';}
+    if(it.auto){nameHtml+='<div class="note" id="au'+it.n+'"></div>';}
+    var qtyHtml;
+    if(it.qtyOpts){qtyHtml='<select class="qin">'+it.qtyOpts.map(function(v){return '<option value="'+v+'"'+(v===s.q?' selected':'')+'>'+v+' nos</option>';}).join('')+'</select>';}
+    else if(it.t==='fixedqty'){qtyHtml='<input class="num qin" type="number" value="'+s.q+'" readonly>';}
+    else{qtyHtml='<input class="num qin" type="number" step="any" value="'+s.q+'" aria-label="Quantity in '+it.unit+'">';}
+    tr.innerHTML='<td class="sn">'+it.n+'</td><td class="inc"><input type="checkbox" '+(s.on?'checked':'')+' aria-label="Include '+esc(it.name)+'"></td>'+
+      '<td class="name">'+nameHtml+'</td>'+
+      '<td class="q">'+qtyHtml+'<div class="note" style="text-align:right">'+esc(it.unit)+'</div></td>'+
+      '<td class="r"><input class="num rin" type="number" step="any" value="'+s.rate+'" aria-label="Rate"><div class="note" style="text-align:right">'+(it.kg?'per kg':'per '+(it.unit==='lumpsum'?'lot':it.unit))+'</div></td>'+
+      '<td class="a" id="am'+it.n+'">0</td>';
+    tb.appendChild(tr);
+    var chk=tr.querySelector('input[type=checkbox]');
+    chk.onchange=function(){s.on=this.checked;recalc();};
+    var sel=tr.querySelector('td.name select:not(.sel2)');
+    var sel2=tr.querySelector('.sel2');if(sel2)sel2.onchange=function(){s.opt2=parseInt(this.value,10);recalc();};
+    if(sel)sel.onchange=function(){
+      s.opt=parseInt(this.value,10);var o=it.opts[s.opt];
+      if(o.rate!=null){s.rate=o.rate;tr.querySelector('.rin').value=o.rate;}
+      recalc();
+    };
+    var ni=tr.querySelector('.note-in');if(ni)ni.oninput=function(){s.note=this.value;recalc();};
+    var q=tr.querySelector('.qin');
+    q.oninput=q.onchange=function(){s.q=parseFloat(this.value)||0;if(it.auto)overrides[it.auto]=true;recalc();};
+    tr.querySelector('.rin').oninput=function(){s.rate=parseFloat(this.value)||0;recalc();};
+  });
+}
+
+/* ---------- calculation ---------- */
+function areas(){
+  var L=num('L'),B=num('B'),H=num('H');
+  var wallSqft=walls.reduce(function(a,w){return a+(w.w*w.h*w.n);},0);
+  var ceilSqft=num('CL')*num('CB');
+  var floorSqft=L*B;
+  var pl=st[10],plIt=ITEMS.filter(function(x){return x.n===10;})[0];
+  var plSqft=(pl&&pl.on&&plIt.opts[pl.opt])?plIt.opts[pl.opt].area*pl.q:0;
+  return {wallSqft:wallSqft,ceilSqft:ceilSqft,floorSqft:floorSqft,vol:L*B*H,plSqft:plSqft};
+}
+var lastDims='';
+function recalc(){
+  var a=areas();
+  $('dimOut').innerHTML='Wall size used: <b>'+wl()+' x '+wh()+' ft</b> and <b>'+wb()+' x '+wh()+' ft</b> &middot; OT floor <b>'+a.floorSqft.toFixed(1)+' sq ft</b>';
+  $('wallOut').innerHTML='Total wall area <b>'+a.wallSqft.toFixed(1)+' sq ft</b> ('+(a.wallSqft/SQFT_SQM).toFixed(2)+' sq m)';
+  $('ceilOut').innerHTML='Ceiling area <b>'+a.ceilSqft.toFixed(1)+' sq ft</b> ('+(a.ceilSqft/SQFT_SQM).toFixed(2)+' sq m)';
+  var paintSqm=Math.max(a.wallSqft+a.ceilSqft-a.plSqft,0)/SQFT_SQM, floorSqm=a.ceilSqft*1.2/SQFT_SQM;
+  [[6,'floor',floorSqm,'Ceiling area + 20%'],[4,'paint',paintSqm,'Walls + ceiling - plenum ('+a.plSqft+' sq ft)']].forEach(function(x){
+    var it=st[x[0]];
+    if(!overrides[x[1]]){it.q=Math.round(x[2]*100)/100;var inp=document.querySelector('#row'+x[0]+' .qin');if(inp&&document.activeElement!==inp)inp.value=it.q;}
+    var au=$('au'+x[0]);if(au)au.textContent=x[3]+' = '+x[2].toFixed(2)+' sq m'+(overrides[x[1]]?' (quantity typed in manually)':' (filled automatically)');
+  });
+  var sub=0;
+  ITEMS.forEach(function(it){
+    var s=st[it.n],amt=s.on?s.q*s.rate:0;sub+=amt;
+    $('am'+it.n).textContent=IN(amt);
+    $('row'+it.n).className=s.on?'':'off';
+    var need=it.opts&&it.opts[s.opt]&&it.opts[s.opt].rate===null||it.manual;
+    $('fl'+it.n).style.display=(s.on&&need&&!s.rate)?'inline-block':'none';
+  });
+  var cost=sub,mg=num('mgn'),mAmt=($('mgnType').value==='pct')?cost*mg/100:mg;
+  var nOT=Math.max(num('nOT'),1),qv=cost+mAmt,tot=qv*nOT,g=tot*(num('gstPct'))/100;
+  $('sCost').textContent=IN(cost);$('sMgn').textContent=IN(mAmt);$('sQv').textContent=IN(qv);$('sTot').textContent=IN(tot);$('sGst').textContent=IN(g);$('sGt').textContent=IN(tot+g);
+  $('tCost').textContent='Rs. '+IN(cost);$('tSub').textContent='Rs. '+IN(tot);$('tGt').textContent='Rs. '+IN(tot+g);
+  T={cost:cost,margin:mAmt,rate:qv,n:nOT,sub:tot,gst:g,gt:tot+g};
+  if(!scopeEdited&&document.activeElement!==$('scopeTa'))genScopeToTa();
+}
+var T={sub:0,gst:0,gt:0};
+
+/* ---------- quotation ---------- */
+function brand(){
+  var b={logo:'',sig:'',co:{legal:'A Unit of Global Appliances Pvt. Ltd.',addr:'S-6, 2nd Floor, Green Park Extension Market, New Delhi - 110016',gst:'07AACCG6606R2Z4'}};
+  try{if(window.parent!==window&&window.parent.GM_BRAND){var x=window.parent.GM_BRAND();b.logo=x.logo||'';b.sig=x.sig||'';b.co=x.co||b.co;}}catch(e){}
+  return b;
+}
+var scopeEdited=false;
+function ordinal(d){var j=d%10,k=d%100;return d+((k>=11&&k<=13)?'th':j===1?'st':j===2?'nd':j===3?'rd':'th');}
+var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function fmtDate(v){if(!v)return '-';var p=v.split('-');return ordinal(+p[2])+' '+MONTHS[+p[1]-1]+"' "+p[0];}
+function rich(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');}
+function genScope(){
+  var L=[],on=function(n){return st[n]&&st[n].on;};
+  var itm=function(n){return ITEMS.filter(function(x){return x.n===n;})[0];};
+  var opt=function(n){return itm(n).opts[st[n].opt].l;};
+  var q=function(n){return st[n].q;};
+  var MM='As per measurement';
+  L.push(['Supply & Installation of Wall Panel - EGP .8MM at front and GI Sheet of 0.5 mm thick in back. Total Puff Panel thickness of 50 mm.','INDIGENOUS',MM]);
+  L.push(['Supply & Installation of Ceiling Panel - EGP .8MM at front and GI Sheet of 0.5 mm thick in back. Total Puff Panel thickness of 30 mm.','INDIGENOUS',MM]);
+  if(on(4))L.push(['Anti-Bacterial Paint for Wall & Ceiling','JOTUN',MM]);
+  if(on(5))L.push(['Supply & Installation of Single Leaf '+opt(5)+' hermetically sealed sliding door of size '+(st[5].note||'1500mm x 2100mm')+' with view window 300mm x 300mm w/o lead lining',itm(5).opts2[st[5].opt2],q(5)]);
+  if(on(6))L.push(['Supply & Installation of Conductive Vinyl Flooring of 2mm thick (In OT only) with pre-prepration ie self leveling of 3mm.','Tarkett',MM]);
+  if(on(7))L.push(['Pressure Relief Damper','INDIGENOUS',q(7)]);
+  if(on(8))L.push(['LED X-Ray View Panel - '+opt(8)+' X-Ray View Screen designed to provide a high level of control luminance without flicker.','INDIGENOUS',q(8)]);
+  if(on(10)){var sz=['1200mm x 1200mm','1800mm x 1800mm','1800mm x 2400mm with 6 nos. HEPA Filters','2400mm x 2400mm'][st[10].opt]||'';
+    L.push(['Supply & Installation of Unidirectional Laminar Air Flow Perforated Plenum Ceiling. // Size '+sz+'.','INDIGENOUS',q(10)]);}
+  if(on(11))L.push(['Surgeon Control Panel ('+(st[11].opt===0?'Analogue - 8 Tile':'Touch Type')+') - mounted flush in the theatre wall; comprising of the following: // 1. Time Day Clock // 2. Time Elapse Clock // 3. OT Light (On & Off) // 4. Peripheral Light (On & Off & Dimming) // 5. Medical Gas Monitoring // 6. Hand Free Telephone // 7. Temperature & humidity indicator and control // 8. HEPA Filter Status // 9. Room Pressure Indicator // 10. Music control','INDIGENOUS',q(11)]);
+  if(on(12))L.push(['Return Air Grill (top and bottom)','INDIGENOUS',q(12)]);
+  var mk=function(n){return st[n].opt===0?'INDIGENOUS':'IMPORTED';};
+  if(on(13))L.push(['Supply and Installation of Single Arm Manual Surgeon Pendant with load bearing 100 kg, 3 Shelves, 1 Drawer, 6 Nos. gas outlets, 6 nos Electric Socket & IV Pole - 1 No.',mk(13),q(13)]);
+  if(on(14))L.push(['Supply and Installation of Anaesthesia Pendant',mk(14),q(14)]);
+  if(on(9))L.push(['Writing Board - size 940mm x 640mm x 50mm','INDIGENOUS',q(9)]);
+  if(on(15))L.push(['Storage Unit - size 1500mm x 2100mm x 350mm with shelves and door.','INDIGENOUS',q(15)]);
+  if(on(16))L.push(['OT Motorised Window','INDIGENOUS',q(16)]);
+  if(on(17))L.push(['Peripheral Lights - size '+(st[17].opt===0?'300mm x 600mm':'600mm x 600mm')+' ('+q(17)+' Nos per OT)','INDIGENOUS',q(17)]);
+  if(on(18))L.push(['Pass Box - size 600mm x 600mm flushed in OT Wall','INDIGENOUS',q(18)]);
+  if(on(19))L.push([st[19].opt===0?'GI Ducting for HVAC inside OT only':'22" Aluminium Ducting for HVAC inside OT only',st[19].opt===0?'INDIGENOUS':'Hindalco/ Jindal',MM]);
+  if(on(20))L.push(['Inside OT Electrical Wiring, Switches, Sockets & Conduits as required','RR/ Or Like',1]);
+  if(on(21))L.push(['Distribution Box/ Electrical Panel outside OT','INDIGENOUS',1]);
+  if(on(22))L.push(['Medical Grade Copper Pipes (MGPS) inside OT from OT Wall till Pendants.','Max flow',1]);
+  if(on(23))L.push(['AHU 3500 CFM with Electric Panel & 7.5 HP Motor.','INDIGENOUS',1]);
+  if(on(24))L.push(['Airconditioner (Outdoor unit only) - 8.5 TR','Daikin',q(24)]);
+  if(on(25))L.push([st[25].opt===0?'GI Ducting from AHU till OT':'22" Aluminium Ducting from AHU till OT',st[25].opt===0?'INDIGENOUS':'Hindalco/ Jindal',MM]);
+  return L.map(function(r){return r.join(' | ');}).join('\n');
+}
+function genScopeToTa(){$('scopeTa').value=genScope();}
+function buildQuote(){
+  recalc();
+  var br=brand(),co=br.co;
+  var cust=$('cust').value||'',city=$('city').value||'',attn=$('attn').value||'';
+  var fill=function(t){return t.replace(/\{CUSTOMER\}/g,cust||'the customer').replace(/\{CITY\}/g,city||'the customer');};
+  var gp=num('gstPct'),n=T.n;
+  var terms=['Purchase order shall be raised in favour of Global Medicare ('+co.legal+'), '+co.addr+'. GST No.: '+co.gst]
+    .concat($('terms').value.split('\n').filter(function(x){return x.trim();}).map(fill));
+  var logoHtml=br.logo?'<img src="'+br.logo+'" alt="Global Medicare">':'<b style="font-size:20px;color:#16305A">Global Medicare</b>';
+  var sigHtml=(br.sig&&$('sigOn').checked)?'<div class="stamp"><img src="'+br.sig+'" alt=""></div>':'<div class="sp"></div>';
+  var subject='Quotation for Modular Operation Theatre'+(cust?' at '+cust:'')+(city?', '+city:'');
+  var addr=esc($('loc').value).replace(/\n/g,'<br>');
+  var scopeRows=$('scopeTa').value.split('\n').filter(function(x){return x.trim();}).map(function(l,i){
+    var p=l.split(' | ');
+    return '<tr><td class="c">'+(i+1)+'</td><td>'+esc(p[0]||'').replace(/ \/\/ /g,'<br>')+'</td><td class="c">'+esc(p[1]||'')+'</td><td class="c">'+esc(p[2]||'')+'</td></tr>';
+  }).join('');
+  var sizeTxt=num('L')+' ft x '+num('B')+' ft';
+  $('paper').innerHTML=
+   '<div class="paper s1">'+
+   '<div class="ph">'+logoHtml+'</div><div class="acc"></div>'+
+   '<div class="title">Proposal &amp; Quotation</div>'+
+   '<p style="margin:6px 0 2px">'+esc(fmtDate($('qdate').value))+'</p>'+
+   '<p style="margin:0 0 8px"><b>Quotation No.:</b> '+esc($('qref').value||'-')+'</p>'+
+   '<p style="margin:0 0 8px"><b>To,</b><br>'+esc(cust||'-')+'<br>'+addr+(attn?'<br><u>Kind Attn: '+esc(attn)+'</u>':'')+'</p>'+
+   '<p style="margin:0 0 8px"><b>Subject: '+esc(subject)+'</b></p>'+
+   '<p style="margin:0 0 6px">Dear Sir,</p>'+
+   '<p style="margin:0 0 6px">Greetings from Global Medicare. Thank you for the opportunity to present our proposal.</p>'+
+   '<h3>ABOUT GLOBAL MEDICARE</h3>'+ABOUT.map(function(t){return '<p style="margin:0 0 6px">'+esc(t)+'</p>';}).join('')+
+   '<h3>COMMERCIAL OFFER</h3>'+
+   '<table class="qt"><thead><tr><th>Product Description</th><th style="width:60px">Qty</th><th style="width:130px">Rate (INR)</th><th style="width:140px">Amount (INR)</th></tr></thead><tbody>'+
+   '<tr><td><b>Supply, Installation, Commissioning of Modular Operation Theatre as per scope of work mentioned in attached sheet.</b></td><td class="c">'+n+'</td><td class="c">Rs. '+IN(T.rate)+'</td><td class="c"><b>Rs. '+IN(T.sub)+'</b></td></tr>'+
+   '<tr class="sum"><td colspan="3">Total</td><td class="c">Rs. '+IN(T.sub)+'</td></tr>'+
+   (gp?'<tr class="sum"><td colspan="3">GST @ '+gp+'%</td><td class="c">Rs. '+IN(T.gst)+'</td></tr>':'')+
+   '<tr class="gt"><td colspan="3">GRAND TOTAL</td><td class="c">Rs. '+IN(T.gt)+'</td></tr></tbody></table>'+
+   '<div class="words">In words: Rupees '+words(T.gt)+' Only.</div>'+
+   '</div><div class="paper s1b">'+
+   '<h3 style="margin-top:0">TERMS &amp; CONDITIONS</h3><ol class="terms">'+terms.map(function(t){return '<li>'+rich(t)+'</li>';}).join('')+'</ol>'+
+   '<p style="margin:110px 0 0">Thanking you,</p>'+
+   '<div class="sign">Yours sincerely,<br><b>For Global Medicare</b><br><i>('+esc(co.legal)+')</i>'+sigHtml+'<b>Authorised Signatory</b></div>'+
+   '</div>'+
+   '<div class="paper s2">'+
+   '<p style="margin:0;text-align:center"><u><b>'+esc((cust||'').toUpperCase())+(city?', '+esc(city.toUpperCase()):'')+'</b></u></p>'+
+   '<p style="margin:2px 0 8px;text-align:center"><u>Scope of Work for '+esc(sizeTxt)+' OT size</u></p>'+
+   '<table class="qt"><thead><tr><th style="width:44px">S.No</th><th>Item Description</th><th style="width:130px">Make</th><th style="width:120px">Quantity</th></tr></thead><tbody>'+scopeRows+'</tbody></table>'+
+   '<div class="fillgap"></div>'+
+   '<div class="lhfoot"><b>GLOBAL MEDICARE</b> ('+esc(co.legal)+')<br>'+esc(co.addr)+'<br>Tel: 011-48475000 &nbsp;&middot;&nbsp; Email: info@globalmedicare.co.in &nbsp;&middot;&nbsp; GST: '+esc(co.gst)+'</div>'+
+   '</div>';
+}
+function go(m){
+  if(m==='q')buildQuote();
+  document.body.className='mode-'+m+(window.parent!==window?' embedded':'');
+  $('tabC').classList.toggle('on',m==='c');$('tabQ').classList.toggle('on',m==='q');
+  window.scrollTo(0,0);
+  try{if(window.parent!==window)window.parent.postMessage({otMode:m},'*');}catch(e){}
+}
+function printQ(){
+  try{window.print();}catch(e){}
+  $('printNote').textContent='If nothing opened, save this file to your computer and open it in Chrome or Edge, then press Ctrl+P.';
+}
+
+/* ---------- start ---------- */
+(function(){
+  try{if(window.parent!==window){document.body.classList.add('embedded');document.documentElement.setAttribute('data-theme','light');}}catch(e){}
+  initState();
+  var d=new Date();$('qdate').value=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+  $('terms').value=DEF_TERMS.join('\n');
+  genScopeToTa();$('scopeTa').oninput=function(){scopeEdited=true;};$('nOT').oninput=recalc;
+  $('CL').value=wl();$('CB').value=wb();
+  walls=[{w:wl(),h:wh(),n:2},{w:wb(),h:wh(),n:2}];
+  buildWalls();buildItems();recalc();
+  // keep ceiling and walls in step with OT size until the user edits them
+  $('CL').oninput=$('CB').oninput=function(){ceilEdited=true;recalc();};
+  ['L','B','H'].forEach(function(id){$(id).oninput=function(){
+    if(!ceilEdited){$('CL').value=wl();$('CB').value=wb();}
+    if(!wallsEdited){walls=[{w:wl(),h:wh(),n:2},{w:wb(),h:wh(),n:2}];buildWalls();}
+    recalc();};});
+  $('gstPct').oninput=recalc;$('mgn').oninput=recalc;$('mgnType').onchange=recalc;
+})();
+<\/script>
+</body>
+</html>
 </script>
 </body>
 </html>
