@@ -2130,18 +2130,18 @@ var ITEMS=[
  {n:'tp',name:'Thickness of puff',info:true,def:'Wall 50 mm / Ceiling 30 mm'},
  {n:4,name:'Anti-bacterial paint',unit:'sq m',q:0,rate:280,auto:'paint'},
  {n:5,name:'OT door',unit:'nos',q:1,rate:100000,sizeNote:'1500 x 2100 mm',opts:[{l:'Automatic',rate:100000},{l:'Manual',rate:100000}],opts2:['Hikom','Metaflex'],chk:'Automatic and Manual are both at Rs. 100000 in the brief. Confirm the Manual rate and any difference between Hikom and Metaflex.'},
- {n:6,name:'Vinyl flooring',unit:'sq m',q:0,rate:3000,auto:'floor',opts:[{l:'Indian',rate:3000},{l:'Imported',rate:null}]},
+ {n:6,name:'Vinyl flooring',unit:'sq m',q:0,rate:2200,auto:'floor',opts:[{l:'Indian (Make - Responsive)',rate:2200},{l:'Imported (Make - Tarkett, including self leveling)',rate:3000}]},
  {n:7,name:'Pressure relief damper',unit:'nos',q:1,rate:7500},
- {n:8,name:'X-ray panel',unit:'nos',q:1,rate:14000,opts:[{l:'2 plate',rate:14000},{l:'3 plate',rate:21000}]},
- {n:9,name:'Writing board',unit:'nos',q:1,rate:5000},
+ {n:8,name:'X-ray panel',vendor:'Digiline',unit:'nos',q:1,rate:14000,opts:[{l:'2 plate',rate:14000},{l:'3 plate',rate:21000}]},
+ {n:9,name:'Writing board',vendor:'Digiline',unit:'nos',q:1,rate:5000},
  {n:10,name:'Perforated plenum ceiling',unit:'nos',q:1,rate:0,opts:[{l:'4 x 4 ft',rate:null,area:16},{l:'6 x 6 ft',rate:null,area:36},{l:'6 x 8 ft',rate:null,area:48},{l:'8 x 8 ft',rate:null,area:64}],manual:true},
- {n:11,name:'Surgeon control panel',unit:'nos',q:1,rate:72000,opts:[{l:'Analog',rate:72000},{l:'Touch',rate:120000}]},
+ {n:11,name:'Surgeon control panel',vendor:'Digiline',unit:'nos',q:1,rate:72000,opts:[{l:'Analog',rate:72000},{l:'Touch',rate:120000}]},
  {n:12,name:'Return air grill',unit:'nos',q:4,rate:4000,qtyOpts:[4,8]},
- {n:13,name:'Surgeon pendant',unit:'nos',q:1,rate:85000,opts:[{l:'Indian',rate:85000},{l:'Imported',rate:null}]},
- {n:14,name:'Anaesthesia pendant',unit:'nos',q:1,rate:85000,opts:[{l:'Indian',rate:85000},{l:'Imported',rate:null}]},
+ {n:13,name:'Surgeon pendant',unit:'nos',q:1,rate:75000,opts:[{l:'Indian',rate:75000},{l:'Imported',rate:150000}]},
+ {n:14,name:'Anaesthesia pendant',unit:'nos',q:1,rate:75000,opts:[{l:'Indian',rate:75000},{l:'Imported',rate:150000}]},
  {n:15,name:'Storage unit',unit:'nos',q:1,rate:45000},
  {n:16,name:'OT motorised window',unit:'nos',q:1,rate:25000},
- {n:17,name:'Peripheral lights',unit:'nos',q:4,rate:7000,qtyFree:true,opts:[{l:'2 x 1',rate:7000},{l:'2 x 2',rate:7000}],chk:'Both sizes are at Rs. 7000 per light. Change the rate for 2 x 2 if it differs.'},
+ {n:17,name:'Peripheral lights',vendor:'Digiline',unit:'nos',q:4,rate:3500,qtyFree:true,opts:[{l:'2 x 1',rate:3500},{l:'2 x 2',rate:7000}]},
  {n:18,name:'Pass box',unit:'nos',q:1,rate:32000},
  {n:19,name:'Ducting inside OT',unit:'kg',q:1000,rate:160,kg:true,opts:[{l:'GI',rate:160},{l:'Aluminium',rate:160}],chk:'Brief gives Rs. 160000 for ducting. Set to 1000 kg x Rs. 160 per kg. Change kg and rate to suit.'},
  {n:20,name:'Electrical wiring inside OT',unit:'lumpsum',q:1,rate:120000},
@@ -2223,6 +2223,7 @@ function buildItems(){
     if(it.opts){nameHtml+='<select aria-label="'+esc(it.name)+' type">'+it.opts.map(function(o,i){return '<option value="'+i+'"'+(i===s.opt?' selected':'')+'>'+esc(o.l)+'</option>';}).join('')+'</select>';}
     if(it.opts2){nameHtml+='<select class="sel2" aria-label="'+esc(it.name)+' make">'+it.opts2.map(function(o,i){return '<option value="'+i+'"'+(i===s.opt2?' selected':'')+'>'+esc(o)+'</option>';}).join('')+'</select>';}
     if(it.sizeNote!==undefined){nameHtml+='<input type="text" class="note-in" aria-label="Size" placeholder="Size" value="'+esc(s.note)+'">';}
+    if(it.vendor){nameHtml+='<div class="note"><b>Vendor - '+esc(it.vendor)+'</b></div>';}
     if(it.chk){nameHtml+='<div class="note">'+esc(it.chk)+'</div>';}
     if(it.auto){nameHtml+='<div class="note" id="au'+it.n+'"></div>';}
     var qtyHtml;
@@ -2315,20 +2316,20 @@ function genScope(){
   if(on('cp'))L.push([pan('cp','Ceiling'),'INDIGENOUS',MM]);
   if(on(4))L.push(['Anti-Bacterial Paint for Wall & Ceiling','JOTUN',MM]);
   if(on(5))L.push(['Supply & Installation of Single Leaf '+opt(5)+' hermetically sealed sliding door of size '+(st[5].note||'1500mm x 2100mm')+' with view window 300mm x 300mm w/o lead lining',itm(5).opts2[st[5].opt2],q(5)]);
-  if(on(6))L.push(['Supply & Installation of Conductive Vinyl Flooring of 2mm thick (In OT only) with pre-prepration ie self leveling of 3mm.',st[6].opt===0?'INDIGENOUS':'Tarkett',MM]);
+  if(on(6))L.push(['Supply & Installation of Conductive Vinyl Flooring of 2mm thick (In OT only)'+(st[6].opt===1?' including self leveling of 3mm.':'.'),st[6].opt===0?'Responsive':'Tarkett',MM]);
   if(on(7))L.push(['Pressure Relief Damper','INDIGENOUS',q(7)]);
-  if(on(8))L.push(['LED X-Ray View Panel - '+opt(8)+' X-Ray View Screen designed to provide a high level of control luminance without flicker.','INDIGENOUS',q(8)]);
+  if(on(8))L.push(['LED X-Ray View Panel - '+opt(8)+' X-Ray View Screen designed to provide a high level of control luminance without flicker.','Digiline',q(8)]);
   if(on(10)){var sz=['1200mm x 1200mm','1800mm x 1800mm','1800mm x 2400mm with 6 nos. HEPA Filters','2400mm x 2400mm'][st[10].opt]||'';
     L.push(['Supply & Installation of Unidirectional Laminar Air Flow Perforated Plenum Ceiling. // Size '+sz+'.','INDIGENOUS',q(10)]);}
-  if(on(11))L.push(['Surgeon Control Panel ('+(st[11].opt===0?'Analogue - 8 Tile':'Touch Type')+') - mounted flush in the theatre wall; comprising of the following: // 1. Time Day Clock // 2. Time Elapse Clock // 3. OT Light (On & Off) // 4. Peripheral Light (On & Off & Dimming) // 5. Medical Gas Monitoring // 6. Hand Free Telephone // 7. Temperature & humidity indicator and control // 8. HEPA Filter Status // 9. Room Pressure Indicator // 10. Music control','INDIGENOUS',q(11)]);
+  if(on(11))L.push(['Surgeon Control Panel ('+(st[11].opt===0?'Analogue - 8 Tile':'Touch Type')+') - mounted flush in the theatre wall; comprising of the following: // 1. Time Day Clock // 2. Time Elapse Clock // 3. OT Light (On & Off) // 4. Peripheral Light (On & Off & Dimming) // 5. Medical Gas Monitoring // 6. Hand Free Telephone // 7. Temperature & humidity indicator and control // 8. HEPA Filter Status // 9. Room Pressure Indicator // 10. Music control','Digiline',q(11)]);
   if(on(12))L.push(['Return Air Grill (top and bottom)','INDIGENOUS',q(12)]);
   var mk=function(n){return st[n].opt===0?'INDIGENOUS':'IMPORTED';};
   if(on(13))L.push(['Supply and Installation of Single Arm Manual Surgeon Pendant with load bearing 100 kg, 3 Shelves, 1 Drawer, 6 Nos. gas outlets, 6 nos Electric Socket & IV Pole - 1 No.',mk(13),q(13)]);
   if(on(14))L.push(['Supply and Installation of Anaesthesia Pendant',mk(14),q(14)]);
-  if(on(9))L.push(['Writing Board - size 940mm x 640mm x 50mm','INDIGENOUS',q(9)]);
+  if(on(9))L.push(['Writing Board - size 940mm x 640mm x 50mm','Digiline',q(9)]);
   if(on(15))L.push(['Storage Unit - size 1500mm x 2100mm x 350mm with shelves and door.','INDIGENOUS',q(15)]);
   if(on(16))L.push(['OT Motorised Window','INDIGENOUS',q(16)]);
-  if(on(17))L.push(['Peripheral Lights - size '+(st[17].opt===0?'300mm x 600mm':'600mm x 600mm')+' ('+q(17)+' Nos per OT)','INDIGENOUS',q(17)]);
+  if(on(17))L.push(['Peripheral Lights - size '+(st[17].opt===0?'300mm x 600mm':'600mm x 600mm')+' ('+q(17)+' Nos per OT)','Digiline',q(17)]);
   if(on(18))L.push(['Pass Box - size 600mm x 600mm flushed in OT Wall','INDIGENOUS',q(18)]);
   if(on(19))L.push([st[19].opt===0?'GI Ducting for HVAC inside OT only':'22" Aluminium Ducting for HVAC inside OT only',st[19].opt===0?'INDIGENOUS':'Hindalco/ Jindal',MM]);
   if(on(20))L.push(['Inside OT Electrical Wiring, Switches, Sockets & Conduits as required','RR/ Or Like',1]);
