@@ -2039,7 +2039,7 @@ body.embedded .wrap{padding-top:10px}
   </div>
 
   <div class="card">
-    <h2>Items 4 to 34</h2>
+    <h2>Items</h2>
     <div class="note" style="margin:0 0 8px">Untick a line to leave it out of the quotation. Rates are pre-filled and can be changed on any line. Lines marked <span class="flag">enter rate</span> need a rate from you.</div>
     <div class="tw"><table class="items" id="itemsTbl">
       <thead><tr><th>#</th><th></th><th>Item</th><th>Qty</th><th>Rate (Rs.)</th><th>Amount (Rs.)</th></tr></thead>
@@ -2118,14 +2118,18 @@ function words(n){
    kg:true    qty is kilograms and the rate is per kg
    auto:'paint'|'floor'  qty is filled from the dimensions above */
 var ITEMS=[
+ {n:'wp',name:'Wall panel (front sheet and back sheet)',unit:'sq m',q:0,rate:0,auto:'wall',manual:true,opts:[{l:'GI and GI',rate:null},{l:'EGP and GI',rate:null},{l:'GI and HPL',rate:null},{l:'HPL and HPL',rate:null},{l:'GI and SS',rate:null},{l:'SS and SS',rate:null}]},
+ {n:'cp',name:'Ceiling panel (front sheet and back sheet)',unit:'sq m',q:0,rate:0,auto:'ceil',manual:true,opts:[{l:'GI and GI',rate:null},{l:'EGP and GI',rate:null},{l:'GI and HPL',rate:null},{l:'HPL and HPL',rate:null},{l:'GI and SS',rate:null},{l:'SS and SS',rate:null}]},
+ {n:'ts',name:'Thickness of sheet',info:true,def:'0.8 mm front / 0.5 mm back'},
+ {n:'tp',name:'Thickness of puff',info:true,def:'Wall 50 mm / Ceiling 30 mm'},
  {n:4,name:'Anti-bacterial paint',unit:'sq m',q:0,rate:280,auto:'paint'},
  {n:5,name:'OT door',unit:'nos',q:1,rate:100000,sizeNote:'1500 x 2100 mm',opts:[{l:'Automatic',rate:100000},{l:'Manual',rate:100000}],opts2:['Hikom','Metaflex'],chk:'Automatic and Manual are both at Rs. 100000 in the brief. Confirm the Manual rate and any difference between Hikom and Metaflex.'},
- {n:6,name:'Vinyl flooring',unit:'sq m',q:0,rate:3000,auto:'floor'},
+ {n:6,name:'Vinyl flooring',unit:'sq m',q:0,rate:3000,auto:'floor',opts:[{l:'Indian',rate:3000},{l:'Imported',rate:null}]},
  {n:7,name:'Pressure relief damper',unit:'nos',q:1,rate:7500},
- {n:8,name:'X-ray panel',unit:'nos',q:1,rate:16000,opts:[{l:'2 plate',rate:16000},{l:'3 plate',rate:16000}],chk:'Both options are at Rs. 16000. Change the rate for 3 plate if it differs.'},
+ {n:8,name:'X-ray panel',unit:'nos',q:1,rate:14000,opts:[{l:'2 plate',rate:14000},{l:'3 plate',rate:21000}]},
  {n:9,name:'Writing board',unit:'nos',q:1,rate:5000},
  {n:10,name:'Perforated plenum ceiling',unit:'nos',q:1,rate:0,opts:[{l:'4 x 4 ft',rate:null,area:16},{l:'6 x 6 ft',rate:null,area:36},{l:'6 x 8 ft',rate:null,area:48},{l:'8 x 8 ft',rate:null,area:64}],manual:true},
- {n:11,name:'Surgeon control panel',unit:'nos',q:1,rate:75000,opts:[{l:'Analog',rate:75000},{l:'Touch',rate:75000}]},
+ {n:11,name:'Surgeon control panel',unit:'nos',q:1,rate:72000,opts:[{l:'Analog',rate:72000},{l:'Touch',rate:120000}]},
  {n:12,name:'Return air grill',unit:'nos',q:4,rate:4000,qtyOpts:[4,8]},
  {n:13,name:'Surgeon pendant',unit:'nos',q:1,rate:85000,opts:[{l:'Indian',rate:85000},{l:'Imported',rate:null}]},
  {n:14,name:'Anaesthesia pendant',unit:'nos',q:1,rate:85000,opts:[{l:'Indian',rate:85000},{l:'Imported',rate:null}]},
@@ -2169,7 +2173,7 @@ var ABOUT=[
 var walls=[]; var st={}; var overrides={}; // st[n]={on,opt,q,rate,note}; overrides: paint/floor qty typed by user
 function initState(){
   ITEMS.forEach(function(it){
-    st[it.n]={on:true,opt:it.opts?0:-1,opt2:it.opts2?0:-1,q:it.q,rate:it.opts&&it.opts[0].rate!=null?it.opts[0].rate:it.rate,note:it.sizeNote||''};
+    st[it.n]={on:true,opt:it.opts?0:-1,opt2:it.opts2?0:-1,q:it.q,rate:it.opts&&it.opts[0].rate!=null?it.opts[0].rate:it.rate,note:it.sizeNote||it.def||''};
   });
 }
 function wl(){return Math.max(num('L')-2,0);} function wb(){return Math.max(num('B')-2,0);} function wh(){return Math.max(num('H')-1.5,0);}
@@ -2198,6 +2202,17 @@ function buildItems(){
   var tb=$('itemsBody');tb.innerHTML='';
   ITEMS.forEach(function(it){
     var s=st[it.n];var tr=document.createElement('tr');tr.id='row'+it.n;
+    var seq=ITEMS.indexOf(it)+4;
+    if(it.info){
+      tr.innerHTML='<td class="sn">'+seq+'</td><td class="inc"><input type="checkbox" '+(s.on?'checked':'')+' aria-label="Include '+esc(it.name)+'"></td>'+
+        '<td class="name"><div class="nm">'+esc(it.name)+'</div><div class="note">Shown in the scope of work. No price.</div></td>'+
+        '<td colspan="2"><input type="text" class="info-in" aria-label="'+esc(it.name)+' measurement" placeholder="Measurement, e.g. 0.8 mm" value="'+esc(s.note)+'"></td>'+
+        '<td class="a" id="am'+it.n+'">-</td>';
+      tb.appendChild(tr);
+      tr.querySelector('input[type=checkbox]').onchange=function(){s.on=this.checked;recalc();};
+      tr.querySelector('.info-in').oninput=function(){s.note=this.value;recalc();};
+      return;
+    }
     var nameHtml='<div class="nm">'+esc(it.name)+'<span class="flag" id="fl'+it.n+'" style="display:none">enter rate</span></div>';
     if(it.opts){nameHtml+='<select aria-label="'+esc(it.name)+' type">'+it.opts.map(function(o,i){return '<option value="'+i+'"'+(i===s.opt?' selected':'')+'>'+esc(o.l)+'</option>';}).join('')+'</select>';}
     if(it.opts2){nameHtml+='<select class="sel2" aria-label="'+esc(it.name)+' make">'+it.opts2.map(function(o,i){return '<option value="'+i+'"'+(i===s.opt2?' selected':'')+'>'+esc(o)+'</option>';}).join('')+'</select>';}
@@ -2208,7 +2223,7 @@ function buildItems(){
     if(it.qtyOpts){qtyHtml='<select class="qin">'+it.qtyOpts.map(function(v){return '<option value="'+v+'"'+(v===s.q?' selected':'')+'>'+v+' nos</option>';}).join('')+'</select>';}
     else if(it.t==='fixedqty'){qtyHtml='<input class="num qin" type="number" value="'+s.q+'" readonly>';}
     else{qtyHtml='<input class="num qin" type="number" step="any" value="'+s.q+'" aria-label="Quantity in '+it.unit+'">';}
-    tr.innerHTML='<td class="sn">'+it.n+'</td><td class="inc"><input type="checkbox" '+(s.on?'checked':'')+' aria-label="Include '+esc(it.name)+'"></td>'+
+    tr.innerHTML='<td class="sn">'+seq+'</td><td class="inc"><input type="checkbox" '+(s.on?'checked':'')+' aria-label="Include '+esc(it.name)+'"></td>'+
       '<td class="name">'+nameHtml+'</td>'+
       '<td class="q">'+qtyHtml+'<div class="note" style="text-align:right">'+esc(it.unit)+'</div></td>'+
       '<td class="r"><input class="num rin" type="number" step="any" value="'+s.rate+'" aria-label="Rate"><div class="note" style="text-align:right">'+(it.kg?'per kg':'per '+(it.unit==='lumpsum'?'lot':it.unit))+'</div></td>'+
@@ -2247,18 +2262,18 @@ function recalc(){
   $('wallOut').innerHTML='Total wall area <b>'+a.wallSqft.toFixed(1)+' sq ft</b> ('+(a.wallSqft/SQFT_SQM).toFixed(2)+' sq m)';
   $('ceilOut').innerHTML='Ceiling area <b>'+a.ceilSqft.toFixed(1)+' sq ft</b> ('+(a.ceilSqft/SQFT_SQM).toFixed(2)+' sq m)';
   var paintSqm=Math.max(a.wallSqft+a.ceilSqft-a.plSqft,0)/SQFT_SQM, floorSqm=a.ceilSqft*1.2/SQFT_SQM;
-  [[6,'floor',floorSqm,'Ceiling area + 20%'],[4,'paint',paintSqm,'Walls + ceiling - plenum ('+a.plSqft+' sq ft)']].forEach(function(x){
+  [['wp','wall',a.wallSqft/SQFT_SQM,'Total wall area'],['cp','ceil',a.ceilSqft/SQFT_SQM,'Ceiling area'],[6,'floor',floorSqm,'Ceiling area + 20%'],[4,'paint',paintSqm,'Walls + ceiling - plenum ('+a.plSqft+' sq ft)']].forEach(function(x){
     var it=st[x[0]];
     if(!overrides[x[1]]){it.q=Math.round(x[2]*100)/100;var inp=document.querySelector('#row'+x[0]+' .qin');if(inp&&document.activeElement!==inp)inp.value=it.q;}
     var au=$('au'+x[0]);if(au)au.textContent=x[3]+' = '+x[2].toFixed(2)+' sq m'+(overrides[x[1]]?' (quantity typed in manually)':' (filled automatically)');
   });
   var sub=0;
   ITEMS.forEach(function(it){
-    var s=st[it.n],amt=s.on?s.q*s.rate:0;sub+=amt;
-    $('am'+it.n).textContent=IN(amt);
+    var s=st[it.n],amt=(s.on&&!it.info)?s.q*s.rate:0;sub+=amt;
+    if(!it.info)$('am'+it.n).textContent=IN(amt);
     $('row'+it.n).className=s.on?'':'off';
     var need=it.opts&&it.opts[s.opt]&&it.opts[s.opt].rate===null||it.manual;
-    $('fl'+it.n).style.display=(s.on&&need&&!s.rate)?'inline-block':'none';
+    if(!it.info)$('fl'+it.n).style.display=(s.on&&need&&!s.rate)?'inline-block':'none';
   });
   var cost=sub,mg=num('mgn'),mAmt=($('mgnType').value==='pct')?cost*mg/100:mg;
   var nOT=Math.max(num('nOT'),1),qv=cost+mAmt,tot=qv*nOT,g=tot*(num('gstPct'))/100;
@@ -2286,11 +2301,15 @@ function genScope(){
   var opt=function(n){return itm(n).opts[st[n].opt].l;};
   var q=function(n){return st[n].q;};
   var MM='As per measurement';
-  L.push(['Supply & Installation of Wall Panel - EGP .8MM at front and GI Sheet of 0.5 mm thick in back. Total Puff Panel thickness of 50 mm.','INDIGENOUS',MM]);
-  L.push(['Supply & Installation of Ceiling Panel - EGP .8MM at front and GI Sheet of 0.5 mm thick in back. Total Puff Panel thickness of 30 mm.','INDIGENOUS',MM]);
+  var SH={GI:'GI Sheet',EGP:'EGP Sheet',HPL:'HPL Sheet',SS:'SS Sheet'};
+  var pan=function(key,nm){var p=opt(key).split(' and ');
+    var t=(on('ts')&&st.ts.note)?' Sheet thickness: '+st.ts.note+'.':'',u=(on('tp')&&st.tp.note)?' Total Puff Panel thickness: '+st.tp.note+'.':'';
+    return 'Supply & Installation of '+nm+' Panel - '+(SH[p[0]]||p[0])+' at front and '+(SH[p[1]]||p[1])+' in back.'+t+u;};
+  if(on('wp'))L.push([pan('wp','Wall'),'INDIGENOUS',MM]);
+  if(on('cp'))L.push([pan('cp','Ceiling'),'INDIGENOUS',MM]);
   if(on(4))L.push(['Anti-Bacterial Paint for Wall & Ceiling','JOTUN',MM]);
   if(on(5))L.push(['Supply & Installation of Single Leaf '+opt(5)+' hermetically sealed sliding door of size '+(st[5].note||'1500mm x 2100mm')+' with view window 300mm x 300mm w/o lead lining',itm(5).opts2[st[5].opt2],q(5)]);
-  if(on(6))L.push(['Supply & Installation of Conductive Vinyl Flooring of 2mm thick (In OT only) with pre-prepration ie self leveling of 3mm.','Tarkett',MM]);
+  if(on(6))L.push(['Supply & Installation of Conductive Vinyl Flooring of 2mm thick (In OT only) with pre-prepration ie self leveling of 3mm.',st[6].opt===0?'INDIGENOUS':'Tarkett',MM]);
   if(on(7))L.push(['Pressure Relief Damper','INDIGENOUS',q(7)]);
   if(on(8))L.push(['LED X-Ray View Panel - '+opt(8)+' X-Ray View Screen designed to provide a high level of control luminance without flicker.','INDIGENOUS',q(8)]);
   if(on(10)){var sz=['1200mm x 1200mm','1800mm x 1800mm','1800mm x 2400mm with 6 nos. HEPA Filters','2400mm x 2400mm'][st[10].opt]||'';
