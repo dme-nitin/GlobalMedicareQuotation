@@ -2130,15 +2130,15 @@ var ITEMS=[
  {n:'tp',name:'Thickness of puff',info:true,def:'Wall 50 mm / Ceiling 30 mm'},
  {n:4,name:'Anti-bacterial paint',unit:'sq m',q:0,rate:280,auto:'paint'},
  {n:5,name:'OT door',unit:'nos',q:1,rate:100000,sizeNote:'1500 x 2100 mm',opts:[{l:'Automatic',rate:100000},{l:'Manual',rate:100000}],opts2:['Hikom','Metaflex'],chk:'Automatic and Manual are both at Rs. 100000 in the brief. Confirm the Manual rate and any difference between Hikom and Metaflex.'},
- {n:6,name:'Vinyl flooring',unit:'sq m',q:0,rate:2200,auto:'floor',opts:[{l:'Indian (Make - Responsive)',rate:2200},{l:'Imported (Make - Tarkett, including self leveling)',rate:3000}]},
+ {n:6,name:'Vinyl flooring',unit:'sq m',q:0,rate:2200,auto:'floor',opts:[{l:'Indian (Make - Responsive)',rate:2200},{l:'Imported (Make - Tarkett, including self labeling)',rate:3000}]},
  {n:7,name:'Pressure relief damper',unit:'nos',q:1,rate:7500},
  {n:8,name:'X-ray panel',vendor:'Digiline',unit:'nos',q:1,rate:14000,opts:[{l:'2 plate',rate:14000},{l:'3 plate',rate:21000}]},
  {n:9,name:'Writing board',vendor:'Digiline',unit:'nos',q:1,rate:5000},
  {n:10,name:'Perforated plenum ceiling',unit:'nos',q:1,rate:0,opts:[{l:'4 x 4 ft',rate:null,area:16},{l:'6 x 6 ft',rate:null,area:36},{l:'6 x 8 ft',rate:null,area:48},{l:'8 x 8 ft',rate:null,area:64}],manual:true},
  {n:11,name:'Surgeon control panel',vendor:'Digiline',unit:'nos',q:1,rate:72000,opts:[{l:'Analog',rate:72000},{l:'Touch',rate:120000}]},
  {n:12,name:'Return air grill',unit:'nos',q:4,rate:4000,qtyOpts:[4,8]},
- {n:13,name:'Surgeon pendant',unit:'nos',q:1,rate:75000,opts:[{l:'Indian',rate:75000},{l:'Imported',rate:150000}]},
- {n:14,name:'Anaesthesia pendant',unit:'nos',q:1,rate:75000,opts:[{l:'Indian',rate:75000},{l:'Imported',rate:150000}]},
+ {n:13,name:'Surgeon pendant',unit:'nos',q:1,rate:75000,opts:[{l:'Indian',rate:75000},{l:'Imported',rate:1500000}]},
+ {n:14,name:'Anaesthesia pendant',unit:'nos',q:1,rate:75000,opts:[{l:'Indian',rate:75000},{l:'Imported',rate:1500000}]},
  {n:15,name:'Storage unit',unit:'nos',q:1,rate:45000},
  {n:16,name:'OT motorised window',unit:'nos',q:1,rate:25000},
  {n:17,name:'Peripheral lights',vendor:'Digiline',unit:'nos',q:4,rate:3500,qtyFree:true,opts:[{l:'2 x 1',rate:3500},{l:'2 x 2',rate:7000}]},
@@ -2316,7 +2316,7 @@ function genScope(){
   if(on('cp'))L.push([pan('cp','Ceiling'),'INDIGENOUS',MM]);
   if(on(4))L.push(['Anti-Bacterial Paint for Wall & Ceiling','JOTUN',MM]);
   if(on(5))L.push(['Supply & Installation of Single Leaf '+opt(5)+' hermetically sealed sliding door of size '+(st[5].note||'1500mm x 2100mm')+' with view window 300mm x 300mm w/o lead lining',itm(5).opts2[st[5].opt2],q(5)]);
-  if(on(6))L.push(['Supply & Installation of Conductive Vinyl Flooring of 2mm thick (In OT only)'+(st[6].opt===1?' including self leveling of 3mm.':'.'),st[6].opt===0?'Responsive':'Tarkett',MM]);
+  if(on(6))L.push(['Supply & Installation of Conductive Vinyl Flooring of 2mm thick (In OT only)'+(st[6].opt===1?' including self labeling.':'.'),st[6].opt===0?'Responsive':'Tarkett',MM]);
   if(on(7))L.push(['Pressure Relief Damper','INDIGENOUS',q(7)]);
   if(on(8))L.push(['LED X-Ray View Panel - '+opt(8)+' X-Ray View Screen designed to provide a high level of control luminance without flicker.','Digiline',q(8)]);
   if(on(10)){var sz=['1200mm x 1200mm','1800mm x 1800mm','1800mm x 2400mm with 6 nos. HEPA Filters','2400mm x 2400mm'][st[10].opt]||'';
