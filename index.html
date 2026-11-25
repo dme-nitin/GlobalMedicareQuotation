@@ -2129,7 +2129,7 @@ var ITEMS=[
  {n:'ts',name:'Thickness of sheet',info:true,def:'0.8 mm front / 0.5 mm back'},
  {n:'tp',name:'Thickness of puff',info:true,def:'Wall 50 mm / Ceiling 30 mm'},
  {n:4,name:'Anti-bacterial paint',unit:'sq m',q:0,rate:280,auto:'paint'},
- {n:5,name:'OT door',unit:'nos',q:1,rate:100000,sizeNote:'1500 x 2100 mm',opts:[{l:'Automatic',rate:100000},{l:'Manual',rate:100000}],opts2:['Hikom','Metaflex'],chk:'Automatic and Manual are both at Rs. 100000 in the brief. Confirm the Manual rate and any difference between Hikom and Metaflex.'},
+ {n:5,name:'OT door',unit:'nos',q:1,rate:175000,sizeNote:'1500 x 2100 mm',opts:[{l:'Automatic',rate:175000},{l:'Manual',rate:90000}],opts2:['Hikom','Metaflex'],matrix:[[175000,215000],[90000,95000]]},
  {n:6,name:'Vinyl flooring',unit:'sq m',q:0,rate:2200,auto:'floor',opts:[{l:'Indian (Make - Responsive)',rate:2200},{l:'Imported (Make - Tarkett, including self labeling)',rate:3000}]},
  {n:7,name:'Pressure relief damper',unit:'nos',q:1,rate:7500},
  {n:8,name:'X-ray panel',vendor:'Digiline',unit:'nos',q:1,rate:14000,opts:[{l:'2 plate',rate:14000},{l:'3 plate',rate:21000}]},
@@ -2239,10 +2239,12 @@ function buildItems(){
     var chk=tr.querySelector('input[type=checkbox]');
     chk.onchange=function(){s.on=this.checked;recalc();};
     var sel=tr.querySelector('td.name select:not(.sel2)');
-    var sel2=tr.querySelector('.sel2');if(sel2)sel2.onchange=function(){s.opt2=parseInt(this.value,10);recalc();};
+    var syncMx=function(){if(it.matrix){s.rate=it.matrix[s.opt][s.opt2];tr.querySelector('.rin').value=s.rate;}};
+    var sel2=tr.querySelector('.sel2');if(sel2)sel2.onchange=function(){s.opt2=parseInt(this.value,10);syncMx();recalc();};
     if(sel)sel.onchange=function(){
       s.opt=parseInt(this.value,10);var o=it.opts[s.opt];
       if(o.rate!=null){s.rate=o.rate;tr.querySelector('.rin').value=o.rate;}
+      syncMx();
       recalc();
     };
     var ni=tr.querySelector('.note-in');if(ni)ni.oninput=function(){s.note=this.value;recalc();};
