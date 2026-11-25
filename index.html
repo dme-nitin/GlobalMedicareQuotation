@@ -1871,6 +1871,8 @@ boot();
 
 /* Used by the embedded OT Quotation page for the letterhead logo, company details and seal. */
 function GM_BRAND(){return {logo:LOGO_IMG,sig:SIG,co:CO};}
+/* Lets the embedded OT page save through the same backend URL. */
+function GM_WEBAPP(){return WEBAPP_URL;}
 </script>
 <script type="text/plain" id="otSrc"><!DOCTYPE html>
 <html lang="en">
@@ -1878,6 +1880,8 @@ function GM_BRAND(){return {logo:LOGO_IMG,sig:SIG,co:CO};}
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OT Quotation Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
 <style>
 /* Layout: sticky total bar + two tabs (Calculator / Quotation). Palette: navy ink, teal accent, warm paper. */
 :root{
@@ -1940,7 +1944,7 @@ tr.off td{opacity:.45}
 .tot .gst input{width:64px}
 #quote{display:none}
 body.mode-q #calc{display:none} body.mode-q #quote{display:block} body.mode-q .tot{display:none}
-.paper{background:#fff;color:#1a1a1a;max-width:794px;min-height:1050px;margin:0 auto;padding:20mm 18mm;border:1px solid #ccc;font-family:Georgia,"Times New Roman",serif;font-size:12px;line-height:1.55;display:flex;flex-direction:column;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+.paper{background:#fff;color:#1a1a1a;max-width:794px;min-height:1123px;margin:0 auto;padding:20mm 18mm;border:1px solid #ccc;font-family:Georgia,"Times New Roman",serif;font-size:12px;line-height:1.55;display:flex;flex-direction:column;box-shadow:0 4px 18px rgba(0,0,0,.12)}
 .paper .ph{display:flex;justify-content:flex-end;align-items:flex-start;border-bottom:3px solid #16305A;padding-bottom:9px;margin-bottom:6px}
 .paper .ph img{height:28px;display:block}
 .paper .acc{height:3px;background:#0E7C86;margin-bottom:14px}
@@ -2083,7 +2087,9 @@ body.embedded .wrap{padding-top:10px}
   <div class="pvtools">
     <button class="btn ghost" onclick="go('c')">&larr; Back to calculator</button>
     <button class="btn" onclick="printQ()">Print / Save as PDF</button>
+    <button class="btn" id="saveBtn" onclick="saveOT()">Save to Google Sheet</button>
     <span class="note" id="printNote"></span>
+    <span class="note" id="saveStatus" style="flex-basis:100%"></span>
   </div>
   <div id="paper"></div>
 </div></div>
@@ -2276,7 +2282,7 @@ function recalc(){
     if(!it.info)$('fl'+it.n).style.display=(s.on&&need&&!s.rate)?'inline-block':'none';
   });
   var cost=sub,mg=num('mgn'),mAmt=($('mgnType').value==='pct')?cost*mg/100:mg;
-  var nOT=Math.max(num('nOT'),1),qv=cost+mAmt,tot=qv*nOT,g=tot*(num('gstPct'))/100;
+  var nOT=Math.max(num('nOT'),1),qv=Math.round(cost+mAmt),tot=qv*nOT,g=Math.round(tot*(num('gstPct'))/100);
   $('sCost').textContent=IN(cost);$('sMgn').textContent=IN(mAmt);$('sQv').textContent=IN(qv);$('sTot').textContent=IN(tot);$('sGst').textContent=IN(g);$('sGt').textContent=IN(tot+g);
   $('tCost').textContent='Rs. '+IN(cost);$('tSub').textContent='Rs. '+IN(tot);$('tGt').textContent='Rs. '+IN(tot+g);
   T={cost:cost,margin:mAmt,rate:qv,n:nOT,sub:tot,gst:g,gt:tot+g};
@@ -2346,10 +2352,10 @@ function buildQuote(){
   var sigHtml=(br.sig&&$('sigOn').checked)?'<div class="stamp"><img src="'+br.sig+'" alt=""></div>':'<div class="sp"></div>';
   var subject='Quotation for Modular Operation Theatre'+(cust?' at '+cust:'')+(city?', '+city:'');
   var addr=esc($('loc').value).replace(/\n/g,'<br>');
-  var scopeRows=$('scopeTa').value.split('\n').filter(function(x){return x.trim();}).map(function(l,i){
+  var scopeRowsArr=$('scopeTa').value.split('\n').filter(function(x){return x.trim();}).map(function(l,i){
     var p=l.split(' | ');
     return '<tr><td class="c">'+(i+1)+'</td><td>'+esc(p[0]||'').replace(/ \/\/ /g,'<br>')+'</td><td class="c">'+esc(p[1]||'')+'</td><td class="c">'+esc(p[2]||'')+'</td></tr>';
-  }).join('');
+  });
   var sizeTxt=num('L')+' ft x '+num('B')+' ft';
   $('paper').innerHTML=
    '<div class="paper s1">'+
@@ -2373,18 +2379,86 @@ function buildQuote(){
    '<h3 style="margin-top:0">TERMS &amp; CONDITIONS</h3><ol class="terms">'+terms.map(function(t){return '<li>'+rich(t)+'</li>';}).join('')+'</ol>'+
    '<p style="margin:110px 0 0">Thanking you,</p>'+
    '<div class="sign">Yours sincerely,<br><b>For Global Medicare</b><br><i>('+esc(co.legal)+')</i>'+sigHtml+'<b>Authorised Signatory</b></div>'+
-   '</div>'+
-   '<div class="paper s2">'+
-   '<p style="margin:0;text-align:center"><u><b>'+esc((cust||'').toUpperCase())+(city?', '+esc(city.toUpperCase()):'')+'</b></u></p>'+
-   '<p style="margin:2px 0 8px;text-align:center"><u>Scope of Work for '+esc(sizeTxt)+' OT size</u></p>'+
-   '<table class="qt"><thead><tr><th style="width:44px">S.No</th><th>Item Description</th><th style="width:130px">Make</th><th style="width:120px">Quantity</th></tr></thead><tbody>'+scopeRows+'</tbody></table>'+
-   '<div class="fillgap"></div>'+
-   '<div class="lhfoot"><b>GLOBAL MEDICARE</b> ('+esc(co.legal)+')<br>'+esc(co.addr)+'<br>Tel: 011-48475000 &nbsp;&middot;&nbsp; Email: info@globalmedicare.co.in &nbsp;&middot;&nbsp; GST: '+esc(co.gst)+'</div>'+
    '</div>';
+  var head='<p style="margin:0;text-align:center"><u><b>'+esc((cust||'').toUpperCase())+(city?', '+esc(city.toUpperCase()):'')+'</b></u></p>'+
+   '<p style="margin:2px 0 8px;text-align:center"><u>Scope of Work for '+esc(sizeTxt)+' OT size</u></p>';
+  var thead='<thead><tr><th style="width:44px">S.No</th><th>Item Description</th><th style="width:130px">Make</th><th style="width:120px">Quantity</th></tr></thead>';
+  var foot='<div class="lhfoot"><b>GLOBAL MEDICARE</b> ('+esc(co.legal)+')<br>'+esc(co.addr)+'<br>Tel: 011-48475000 &nbsp;&middot;&nbsp; Email: info@globalmedicare.co.in &nbsp;&middot;&nbsp; GST: '+esc(co.gst)+'</div>';
+  buildScopePages_(head,thead,scopeRowsArr,foot);
+}
+/* Scope of work is split over as many A4 pages as it needs, so nothing is cut when saved as PDF. */
+function buildScopePages_(head,thead,rows,foot){
+  var host=$('paper'),LIM=1123;
+  function mk(first){var d=document.createElement('div');d.className='paper s2';d.innerHTML=(first?head:'')+'<table class="qt">'+thead+'<tbody></tbody></table>';host.appendChild(d);return d;}
+  var cur=mk(true),tb=cur.querySelector('tbody');
+  rows.forEach(function(r){
+    tb.insertAdjacentHTML('beforeend',r);
+    if(cur.scrollHeight>LIM+1&&tb.children.length>1){
+      var last=tb.lastElementChild;tb.removeChild(last);
+      cur=mk(false);tb=cur.querySelector('tbody');tb.appendChild(last);
+    }
+  });
+  cur.insertAdjacentHTML('beforeend','<div class="fillgap"></div>'+foot);
+  if(cur.scrollHeight>LIM+1&&tb.children.length>1){
+    var ft=cur.querySelector('.lhfoot'),fg=cur.querySelector('.fillgap');
+    cur.removeChild(ft);cur.removeChild(fg);
+    var lastRow=tb.lastElementChild;tb.removeChild(lastRow);
+    var nx=mk(false);nx.querySelector('tbody').appendChild(lastRow);
+    nx.insertAdjacentHTML('beforeend','<div class="fillgap"></div>'+foot);
+  }
+}
+/* ---------- save to Google Sheet (uses the same backend as the main app) ---------- */
+function parentApi_(){try{if(window.parent!==window)return window.parent;}catch(e){}return null;}
+async function renderPdfBase64_(){
+  if(!window.html2canvas)throw new Error('html2canvas library not loaded - check your internet connection.');
+  if(!window.jspdf||!window.jspdf.jsPDF)throw new Error('jsPDF library not loaded - check your internet connection.');
+  var jsPDF=window.jspdf.jsPDF,pages=Array.prototype.slice.call(document.querySelectorAll('#paper .paper'));
+  var pdf=new jsPDF({unit:'mm',format:'a4',orientation:'portrait'}),first=true;
+  for(var i=0;i<pages.length;i++){
+    var el=pages[i],old=el.style.cssText;
+    el.style.width='794px';el.style.maxWidth='794px';el.style.margin='0';el.style.boxShadow='none';
+    var cv=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:'#ffffff'});
+    el.style.cssText=old;
+    var pageH=Math.round(cv.width*297/210);
+    for(var y=0;y<cv.height-2;y+=pageH){
+      var h=Math.min(pageH,cv.height-y),sl=document.createElement('canvas');sl.width=cv.width;sl.height=pageH;
+      var cx=sl.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,sl.width,sl.height);cx.drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
+      if(!first)pdf.addPage();first=false;
+      pdf.addImage(sl.toDataURL('image/jpeg',0.95),'JPEG',0,0,210,297);
+    }
+  }
+  var blob=pdf.output('blob');
+  return await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1]||'');};r.onerror=function(){rej(new Error('Could not read the generated PDF.'));};r.readAsDataURL(blob);});
+}
+async function saveOT(){
+  var stEl=$('saveStatus'),btn=$('saveBtn'),par=parentApi_(),url='';
+  try{url=(par&&par.GM_WEBAPP)?par.GM_WEBAPP():'';}catch(e){}
+  if(!url||url.indexOf('PASTE_YOUR')===0){stEl.textContent='Saving works from the main Global Medicare app with the backend URL (WEBAPP_URL) set.';return;}
+  if(!$('cust').value.trim()){stEl.textContent='Please enter the Customer / Hospital name first (Calculator tab).';return;}
+  btn.disabled=true;stEl.textContent='Rendering PDF...';
+  try{
+    buildQuote();
+    var pdf=await renderPdfBase64_();
+    stEl.textContent='Saving...';
+    var ref=$('qref').value.trim();
+    var payload={
+      customerName:$('cust').value.trim(),companyName:$('cust').value.trim(),email:'',phone:'',
+      subject:'Quotation for Modular Operation Theatre',
+      productName:'Modular Operation Theatre',productKey:'ot',productKeys:['ot'],quotationNo:ref,
+      items:[{description:'Modular Operation Theatre ('+num('L')+' ft x '+num('B')+' ft)'+($('city').value?' - '+$('city').value.trim():'')+(ref?' - Ref '+ref:''),qty:T.n,rate:T.rate}],
+      totalAmount:T.gt,terms:'',pdfBase64:pdf
+    };
+    var res=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+    var j=await res.json();
+    if(j.status==='success'){
+      stEl.innerHTML='Saved as <b>'+esc(j.quotationId)+'</b>. <a href="'+esc(j.pdfLink)+'" target="_blank" rel="noopener">Open PDF</a>';
+    }else stEl.textContent='Error: '+(j.message||'unknown error');
+  }catch(err){stEl.textContent='Failed to save: '+err.message;}
+  btn.disabled=false;
 }
 function go(m){
-  if(m==='q')buildQuote();
   document.body.className='mode-'+m+(window.parent!==window?' embedded':'');
+  if(m==='q')buildQuote();
   $('tabC').classList.toggle('on',m==='c');$('tabQ').classList.toggle('on',m==='q');
   window.scrollTo(0,0);
   try{if(window.parent!==window)window.parent.postMessage({otMode:m},'*');}catch(e){}
